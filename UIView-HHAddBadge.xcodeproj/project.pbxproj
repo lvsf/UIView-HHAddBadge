@@ -13,6 +13,11 @@
 		1739A0F11E8B6549001A92C9 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 1739A0EF1E8B6549001A92C9 /* Main.storyboard */; };
 		1739A0F31E8B6549001A92C9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1739A0F21E8B6549001A92C9 /* Assets.xcassets */; };
 		1739A0F61E8B6549001A92C9 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 1739A0F41E8B6549001A92C9 /* LaunchScreen.storyboard */; };
+		1739A1051E8B667C001A92C9 /* UIView+HHAddBadge.m in Sources */ = {isa = PBXBuildFile; fileRef = 1739A0FF1E8B667C001A92C9 /* UIView+HHAddBadge.m */; };
+		1739A1061E8B667C001A92C9 /* 任飘渺.png in Resources */ = {isa = PBXBuildFile; fileRef = 1739A1011E8B667C001A92C9 /* 任飘渺.png */; };
+		1739A1071E8B667C001A92C9 /* 小叶子.png in Resources */ = {isa = PBXBuildFile; fileRef = 1739A1021E8B667C001A92C9 /* 小叶子.png */; };
+		1739A1081E8B667C001A92C9 /* 气泡.png in Resources */ = {isa = PBXBuildFile; fileRef = 1739A1031E8B667C001A92C9 /* 气泡.png */; };
+		1739A1091E8B667C001A92C9 /* 长气泡.png in Resources */ = {isa = PBXBuildFile; fileRef = 1739A1041E8B667C001A92C9 /* 长气泡.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +31,12 @@
 		1739A0F21E8B6549001A92C9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1739A0F51E8B6549001A92C9 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		1739A0F71E8B6549001A92C9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1739A0FE1E8B667C001A92C9 /* UIView+HHAddBadge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIView+HHAddBadge.h"; sourceTree = "<group>"; };
+		1739A0FF1E8B667C001A92C9 /* UIView+HHAddBadge.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIView+HHAddBadge.m"; sourceTree = "<group>"; };
+		1739A1011E8B667C001A92C9 /* 任飘渺.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "任飘渺.png"; sourceTree = "<group>"; };
+		1739A1021E8B667C001A92C9 /* 小叶子.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "小叶子.png"; sourceTree = "<group>"; };
+		1739A1031E8B667C001A92C9 /* 气泡.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "气泡.png"; sourceTree = "<group>"; };
+		1739A1041E8B667C001A92C9 /* 长气泡.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "长气泡.png"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +69,8 @@
 		1739A0E51E8B6549001A92C9 /* UIView-HHAddBadge */ = {
 			isa = PBXGroup;
 			children = (
+				1739A0FD1E8B667C001A92C9 /* Class */,
+				1739A1001E8B667C001A92C9 /* Resource */,
 				1739A0E91E8B6549001A92C9 /* AppDelegate.h */,
 				1739A0EA1E8B6549001A92C9 /* AppDelegate.m */,
 				1739A0EC1E8B6549001A92C9 /* ViewController.h */,
@@ -77,6 +90,26 @@
 				1739A0E71E8B6549001A92C9 /* main.m */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		1739A0FD1E8B667C001A92C9 /* Class */ = {
+			isa = PBXGroup;
+			children = (
+				1739A0FE1E8B667C001A92C9 /* UIView+HHAddBadge.h */,
+				1739A0FF1E8B667C001A92C9 /* UIView+HHAddBadge.m */,
+			);
+			path = Class;
+			sourceTree = "<group>";
+		};
+		1739A1001E8B667C001A92C9 /* Resource */ = {
+			isa = PBXGroup;
+			children = (
+				1739A1011E8B667C001A92C9 /* 任飘渺.png */,
+				1739A1021E8B667C001A92C9 /* 小叶子.png */,
+				1739A1031E8B667C001A92C9 /* 气泡.png */,
+				1739A1041E8B667C001A92C9 /* 长气泡.png */,
+			);
+			path = Resource;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -139,8 +172,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				1739A0F61E8B6549001A92C9 /* LaunchScreen.storyboard in Resources */,
+				1739A1091E8B667C001A92C9 /* 长气泡.png in Resources */,
 				1739A0F31E8B6549001A92C9 /* Assets.xcassets in Resources */,
 				1739A0F11E8B6549001A92C9 /* Main.storyboard in Resources */,
+				1739A1071E8B667C001A92C9 /* 小叶子.png in Resources */,
+				1739A1081E8B667C001A92C9 /* 气泡.png in Resources */,
+				1739A1061E8B667C001A92C9 /* 任飘渺.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -153,6 +190,7 @@
 			files = (
 				1739A0EE1E8B6549001A92C9 /* ViewController.m in Sources */,
 				1739A0EB1E8B6549001A92C9 /* AppDelegate.m in Sources */,
+				1739A1051E8B667C001A92C9 /* UIView+HHAddBadge.m in Sources */,
 				1739A0E81E8B6549001A92C9 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

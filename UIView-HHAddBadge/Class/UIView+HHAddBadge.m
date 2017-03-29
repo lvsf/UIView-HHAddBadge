@@ -444,6 +444,10 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
 }
 
 - (void)hh_remove {
+    [self.badgeManager.badgeDipslayContainer removeFromSuperview];
+    if (objc_getAssociatedObject(self, @selector(setBadgeManager:))) {
+        self.badgeManager = nil;
+    }
 }
 
 - (void)hh_updateBadgeValue:(id)badgeValue apperence:(void (^)(HHBadgeApperence *))apperenceBlock {
@@ -488,19 +492,26 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
 }
 
 - (void)handleUpdateBadgeValue {
-    if (!self.badgeManager.badgeDipslayContainer.superview) {
-        UIView *container = self;
-        if (container.superview) {
-            container = container.superview;
+    if (self.hh_badgeValue)
+    {
+        if (!self.badgeManager.badgeDipslayContainer.superview) {
+            UIView *container = self;
+            if (container.superview) {
+                container = container.superview;
+            }
+            [container addSubview:self.badgeManager.badgeDipslayContainer];
         }
-        [container addSubview:self.badgeManager.badgeDipslayContainer];
+        [self.hh_badgeView removeFromSuperview];
+        [self.badgeManager setBadgeValue:self.hh_badgeValue];
+        [self.badgeManager updateBadgeValue];
+        [self setHh_badgeView:self.badgeManager.badgeView];
+        [self.badgeManager.badgeDipslayContainer addSubview:self.hh_badgeView];
+        [self handleUpdateLayout];
     }
-    [self.hh_badgeView removeFromSuperview];
-    [self.badgeManager setBadgeValue:self.hh_badgeValue];
-    [self.badgeManager updateBadgeValue];
-    [self setHh_badgeView:self.badgeManager.badgeView];
-    [self.badgeManager.badgeDipslayContainer addSubview:self.hh_badgeView];
-    [self handleUpdateLayout];
+    else
+    {
+        [self hh_remove];
+    }
 }
 
 #pragma mark - set/get
