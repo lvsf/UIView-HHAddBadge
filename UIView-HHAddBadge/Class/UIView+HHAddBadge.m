@@ -155,6 +155,7 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
 
 + (NSArray*)observeLayoutKeyPaths {
     return @[@"font",@"anchorPoint",@"horizontalPosition",
+             @"verticalPosition",@"centerOffsetInsets",@"origin",@"size"];
 }
 
 - (void)dealloc {
@@ -492,6 +493,7 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
         }
         containerFrame;
     })];
+    [self.badgeManager.badgeDipslayContainer.superview bringSubviewToFront:self.badgeManager.badgeDipslayContainer];
 }
 
 - (void)handleUpdateBadgeValue {
