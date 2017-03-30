@@ -38,9 +38,9 @@
 }
 
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    [self.btn hh_updateBadgeValue:nil apperence:^(HHBadgeApperence *apperence) {
+    [self.btn hh_updateBadgeValue:@(arc4random_uniform(200)) apperence:^(HHBadgeApperence *apperence) {
         apperence.backgroudColor = [UIColor purpleColor];
-        apperence.font = [UIFont systemFontOfSize:20];
+        apperence.font = [UIFont systemFontOfSize:arc4random_uniform(50)];
     }];
 }
 

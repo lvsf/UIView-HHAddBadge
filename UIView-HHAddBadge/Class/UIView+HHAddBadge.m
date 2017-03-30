@@ -155,8 +155,6 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
 
 + (NSArray*)observeLayoutKeyPaths {
     return @[@"font",@"anchorPoint",@"horizontalPosition",
-             @"verticalPosition",@"centerOffsetInsets",
-             @"origin",@"size"];
 }
 
 - (void)dealloc {
