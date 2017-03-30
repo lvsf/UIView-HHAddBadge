@@ -29,7 +29,7 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
 
 @implementation HHBadgeDisplayRule
 
-- (CGSize)badgeDisplayContainer:(UIView *)displayContainer adjustWithSize:(CGSize)displayContainerSize andBadgeType:(HHBadgeType)badgeType andApperence:(HHBadgeApperence *)apperence {
+- (CGSize)badgeAdjustDisplayContainerSize:(CGSize)displayContainerSize andBadgeType:(HHBadgeType)badgeType andApperence:(HHBadgeApperence *)apperence {
     CGSize adjustSize = displayContainerSize;
     CGFloat boardWidth = 1.5;
     if (badgeType == HHBadgeTypeNumber ||
@@ -39,6 +39,10 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
             adjustSize.width = adjustSize.height;
         }
     }
+    return adjustSize;
+}
+
+- (void)badgeAdjustDisplayContainerStyle:(UIView *)displayContainer withContainerSize:(CGSize)displayContainerSize andBadgeType:(HHBadgeType)badgeType andApperence:(HHBadgeApperence *)apperence {
     if (badgeType == HHBadgeTypeNumber ||
         badgeType == HHBadgeTypeText ||
         badgeType == HHBadgeTypeDot)
@@ -60,7 +64,6 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
         displayContainer.layer.masksToBounds = NO;
         displayContainer.layer.cornerRadius = 0;
     }
-    return adjustSize;
 }
 
 - (NSMutableDictionary *)badgeDisplayHeightMap {
@@ -275,8 +278,8 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
                     break;
             }
             containerFrame.size = CGSizeMake(CGRectGetWidth(badgeFrame) + self.badgeApperence.contentInsets.left + self.badgeApperence.contentInsets.right, CGRectGetHeight(badgeFrame) + self.badgeApperence.contentInsets.top + self.badgeApperence.contentInsets.bottom);
-            if ([self.badgeApperence.displayRule respondsToSelector:@selector(badgeDisplayContainer:adjustWithSize:andBadgeType:andApperence:)] && CGRectGetWidth(containerFrame) > 0 && CGRectGetHeight(containerFrame) ) {
-                containerFrame.size = [self.badgeApperence.displayRule badgeDisplayContainer:self.badgeDipslayContainer adjustWithSize:containerFrame.size andBadgeType:_badgeType andApperence:_badgeApperence];
+            if ([self.badgeApperence.displayRule respondsToSelector:@selector(badgeAdjustDisplayContainerSize:andBadgeType:andApperence:)] && CGRectGetWidth(containerFrame) > 0 && CGRectGetHeight(containerFrame) ) {
+                containerFrame.size = [self.badgeApperence.displayRule badgeAdjustDisplayContainerSize:containerFrame.size andBadgeType:_badgeType andApperence:_badgeApperence];
             }
         }
         
@@ -306,6 +309,10 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
             containY = containY - anchorPointY * CGRectGetHeight(containerFrame);
             containY = containY + self.badgeApperence.centerOffsetInsets.top - self.badgeApperence.centerOffsetInsets.bottom;
             containerFrame.origin = CGPointMake(containX, containY);
+        }
+        
+        if ([self.badgeApperence.displayRule respondsToSelector:@selector(badgeAdjustDisplayContainerStyle:withContainerSize:andBadgeType:andApperence:)]) {
+            [self.badgeApperence.displayRule badgeAdjustDisplayContainerStyle:_badgeDipslayContainer withContainerSize:containerFrame.size andBadgeType:_badgeType andApperence:_badgeApperence];
         }
     }
     _badgeDipslayContainerFrame = containerFrame;

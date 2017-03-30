@@ -45,18 +45,28 @@ typedef NS_ENUM(NSInteger,HHBadgeType) {
 @protocol HHBadgeDisplayRule <NSObject>
 @optional
 /**
- 调整badge显示容器的样式/可以在此处设置显示的圆角,边线,阴影...
+ 调整badge显示容器的size
 
- @param displayContainer      badge显示容器
- @param displayContainerSize badge显示容器的当前size
+ @param displayContainerSize  badge显示容器的当前size
  @param badgeType             badge类型
  @param apperence             badge的样式模型
- @return 调整badge显示容器的frame
+ @return CGSize
  */
-- (CGSize)badgeDisplayContainer:(UIView*)displayContainer
-                 adjustWithSize:(CGSize)displayContainerSize
-                   andBadgeType:(HHBadgeType)badgeType
-                   andApperence:(HHBadgeApperence*)apperence;
+- (CGSize)badgeAdjustDisplayContainerSize:(CGSize)displayContainerSize
+                             andBadgeType:(HHBadgeType)badgeType
+                             andApperence:(HHBadgeApperence*)apperence;
+/**
+ 调整badge显示容器的风格/可以在此处设置显示的圆角,边线,阴影...
+ 
+ @param displayContainer     badge显示容器视图
+ @param displayContainerSize badge显示容器的当前size
+ @param badgeType            badge类型
+ @param apperence            badge的样式模型
+ */
+- (void)badgeAdjustDisplayContainerStyle:(UIView*)displayContainer
+                       withContainerSize:(CGSize)displayContainerSize
+                            andBadgeType:(HHBadgeType)badgeType
+                            andApperence:(HHBadgeApperence*)apperence;
 @end
 
 #pragma mark - HHBadgeDisplayRule
