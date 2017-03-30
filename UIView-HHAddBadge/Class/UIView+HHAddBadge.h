@@ -9,11 +9,11 @@
 #import <UIKit/UIKit.h>
 
 /**
- 按钮附属视图位于依附对象的位置
+ 附属视图相对依附对象的位置
  
- - HHViewAccessoryPositionCenter: 居中
- - HHViewAccessoryPositionHeader: 头部
- - HHViewAccessoryPositionFooter: 尾部
+ - HHBadgePositionCenter: 居中
+ - HHBadgePositionHeader: 头部
+ - HHBadgePositionFooter: 尾部
  */
 typedef NS_ENUM(NSInteger,HHBadgePosition) {
     HHBadgePositionCenter = 1,
@@ -48,13 +48,13 @@ typedef NS_ENUM(NSInteger,HHBadgeType) {
  调整badge显示容器的样式/可以在此处设置显示的圆角,边线,阴影...
 
  @param displayContainer      badge显示容器
- @param displayContainerFrame badge显示容器的当前frame
+ @param displayContainerSize badge显示容器的当前size
  @param badgeType             badge类型
  @param apperence             badge的样式模型
  @return 调整badge显示容器的frame
  */
-- (CGRect)badgeDisplayContainer:(UIView*)displayContainer
-                adjustWithFrame:(CGRect)displayContainerFrame
+- (CGSize)badgeDisplayContainer:(UIView*)displayContainer
+                 adjustWithSize:(CGSize)displayContainerSize
                    andBadgeType:(HHBadgeType)badgeType
                    andApperence:(HHBadgeApperence*)apperence;
 @end

@@ -29,14 +29,14 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
 
 @implementation HHBadgeDisplayRule
 
-- (CGRect)badgeDisplayContainer:(UIView *)displayContainer adjustWithFrame:(CGRect)displayContainerFrame andBadgeType:(HHBadgeType)badgeType andApperence:(HHBadgeApperence *)apperence {
-    CGRect adjustFrame = displayContainerFrame;
+- (CGSize)badgeDisplayContainer:(UIView *)displayContainer adjustWithSize:(CGSize)displayContainerSize andBadgeType:(HHBadgeType)badgeType andApperence:(HHBadgeApperence *)apperence {
+    CGSize adjustSize = displayContainerSize;
     CGFloat boardWidth = 1.5;
     if (badgeType == HHBadgeTypeNumber ||
         badgeType == HHBadgeTypeText) {
-        adjustFrame.size.width += apperence.font.lineHeight * 0.3 + 2 * boardWidth;
-        if (CGRectGetWidth(adjustFrame) < CGRectGetHeight(adjustFrame)) {
-            adjustFrame.size.width = CGRectGetHeight(adjustFrame);
+        adjustSize.width += (apperence.font.lineHeight * 0.3 + 2 * boardWidth);
+        if (adjustSize.width < adjustSize.height) {
+            adjustSize.width = adjustSize.height;
         }
     }
     if (badgeType == HHBadgeTypeNumber ||
@@ -44,7 +44,7 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
         badgeType == HHBadgeTypeDot)
     {
         CGFloat lastHeight = -1;
-        CGFloat currentHeight = CGRectGetHeight(displayContainerFrame);
+        CGFloat currentHeight = displayContainerSize.height;
         NSString *lastHeightKey = [@(badgeType) stringValue];
         if ([self.badgeDisplayHeightMap.allKeys containsObject:lastHeightKey]) {
             lastHeight = [self.badgeDisplayHeightMap[lastHeightKey] doubleValue];
@@ -60,7 +60,7 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
         displayContainer.layer.masksToBounds = NO;
         displayContainer.layer.cornerRadius = 0;
     }
-    return adjustFrame;
+    return adjustSize;
 }
 
 - (NSMutableDictionary *)badgeDisplayHeightMap {
@@ -275,7 +275,11 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
                     break;
             }
             containerFrame.size = CGSizeMake(CGRectGetWidth(badgeFrame) + self.badgeApperence.contentInsets.left + self.badgeApperence.contentInsets.right, CGRectGetHeight(badgeFrame) + self.badgeApperence.contentInsets.top + self.badgeApperence.contentInsets.bottom);
+            if ([self.badgeApperence.displayRule respondsToSelector:@selector(badgeDisplayContainer:adjustWithSize:andBadgeType:andApperence:)] && CGRectGetWidth(containerFrame) > 0 && CGRectGetHeight(containerFrame) ) {
+                containerFrame.size = [self.badgeApperence.displayRule badgeDisplayContainer:self.badgeDipslayContainer adjustWithSize:containerFrame.size andBadgeType:_badgeType andApperence:_badgeApperence];
+            }
         }
+        
         if (!CGPointEqualToPoint(self.badgeApperence.origin, HHViewBadgeLayoutDefaultOrigin)) {
             containerFrame.origin = self.badgeApperence.origin;
         } else {
@@ -305,12 +309,6 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
         }
     }
     _badgeDipslayContainerFrame = containerFrame;
-    if ([self.badgeApperence.displayRule respondsToSelector:@selector(badgeDisplayContainer:adjustWithFrame:andBadgeType:andApperence:)] && CGRectGetWidth(_badgeDipslayContainerFrame) > 0 && CGRectGetHeight(_badgeDipslayContainerFrame) ) {
-        _badgeDipslayContainerFrame = [self.badgeApperence.displayRule badgeDisplayContainer:self.badgeDipslayContainer
-                                                                             adjustWithFrame:_badgeDipslayContainerFrame
-                                                                                andBadgeType:_badgeType
-                                                                                andApperence:_badgeApperence];
-    }
     if (self.badgeType == HHBadgeTypeDot) {
         _badgeFrame = (CGRect){CGPointZero,_badgeDipslayContainerFrame.size};
     } else {
