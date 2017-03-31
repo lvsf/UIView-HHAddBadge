@@ -7,6 +7,7 @@
 //
 
 #import "AppDelegate.h"
+#import "HHBadgeViewController.h"
 
 @interface AppDelegate ()
 
@@ -16,7 +17,17 @@
 
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    // Override point for customization after application launch.
+    
+    [UINavigationBar appearance].barTintColor = [UIColor greenColor];
+    
+    UIWindow *w = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+    [w makeKeyAndVisible];
+    [w setRootViewController:({
+        UITabBarController *vc = [UITabBarController new];
+        [vc addChildViewController:[[UINavigationController alloc] initWithRootViewController:[HHBadgeViewController new]]];
+        vc;
+    })];
+    [self setWindow:w];
     return YES;
 }
 

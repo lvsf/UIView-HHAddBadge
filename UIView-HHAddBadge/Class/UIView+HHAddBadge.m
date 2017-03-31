@@ -1,186 +1,121 @@
 //
 //  UIView+HHAddBadge.m
-//  UIView+HHAddBadge
+//  UIView-HHAddBadge
 //
-//  Created by YunSL on 17/3/10.
+//  Created by YunSL on 17/3/30.
 //  Copyright © 2017年 YunSL. All rights reserved.
 //
 
 #import "UIView+HHAddBadge.h"
 #import <objc/runtime.h>
 
-#define HHViewBadgeLayoutDefaultOrigin CGPointMake(-1, -1)
-#define HHViewBadgeLayoutDefaultSize CGSizeMake(-1, -1)
-#define HHViewBadgeLayoutDefaultDotSize CGSizeMake(6, 6)
+#define HHBadgeViewDefaultCornerRadius -1
+#define HHBadgeViewLayoutDefaultOrigin CGPointMake(-1, -1)
+#define HHBadgeViewLayoutDefaultSize CGSizeMake(-1, -1)
+#define HHBadgeViewLayoutDefaultDotSize CGSizeMake(5, 5)
 
-static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
-    return [text boundingRectWithSize:CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX)
-                              options:NSStringDrawingUsesLineFragmentOrigin |
-                                      NSStringDrawingUsesFontLeading
-                           attributes:@{NSFontAttributeName:font}
-                              context:nil];
-
+/**
+ badge的类型
+ 
+ - HHBadgeTypeNot:    无
+ - HHBadgeTypeNumber: 数字
+ - HHBadgeTypeText:   文本
+ - HHBadgeTypeImage:  图片
+ - HHBadgeTypeDot:    小圆点
+ - HHBadgeTypeCustom: 自定义
+ */
+typedef NS_ENUM(NSInteger,HHBadgeType) {
+    HHBadgeTypeNot = 0,
+    HHBadgeTypeNumber,
+    HHBadgeTypeText,
+    HHBadgeTypeImage,
+    HHBadgeTypeDot,
+    HHBadgeTypeCustomView
 };
 
-#pragma mark - HHBadgeDisplayRule
-@interface HHBadgeDisplayRule()
-@property (nonatomic,strong) NSMutableDictionary *badgeDisplayHeightMap;
-@end
-
-@implementation HHBadgeDisplayRule
-
-- (CGSize)badgeAdjustDisplayContainerSize:(CGSize)displayContainerSize andBadgeType:(HHBadgeType)badgeType andApperence:(HHBadgeApperence *)apperence {
-    CGSize adjustSize = displayContainerSize;
-    CGFloat boardWidth = 1.5;
-    if (badgeType == HHBadgeTypeNumber ||
-        badgeType == HHBadgeTypeText) {
-        adjustSize.width += (apperence.font.lineHeight * 0.3 + 2 * boardWidth);
-        if (adjustSize.width < adjustSize.height) {
-            adjustSize.width = adjustSize.height;
-        }
+static inline CGSize HHBadgeTextSize(NSString *text, UIFont *font) {
+    CGSize size = [text boundingRectWithSize:CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX)
+                                     options:NSStringDrawingUsesLineFragmentOrigin |
+                   NSStringDrawingUsesFontLeading
+                                  attributes:@{NSFontAttributeName:font}
+                                     context:nil].size;
+    size.width += font.lineHeight * 0.3;
+    if (size.width < size.height) {
+        size.width = size.height;
     }
-    return adjustSize;
-}
+    return size;
+};
 
-- (void)badgeAdjustDisplayContainerStyle:(UIView *)displayContainer withContainerSize:(CGSize)displayContainerSize andBadgeType:(HHBadgeType)badgeType andApperence:(HHBadgeApperence *)apperence {
-    if (badgeType == HHBadgeTypeNumber ||
-        badgeType == HHBadgeTypeText ||
-        badgeType == HHBadgeTypeDot)
-    {
-        CGFloat lastHeight = -1;
-        CGFloat currentHeight = displayContainerSize.height;
-        NSString *lastHeightKey = [@(badgeType) stringValue];
-        if ([self.badgeDisplayHeightMap.allKeys containsObject:lastHeightKey]) {
-            lastHeight = [self.badgeDisplayHeightMap[lastHeightKey] doubleValue];
-        }
-        if (lastHeight == -1 || (lastHeight >= 0 && fabs(lastHeight - currentHeight) >= 0.1)) {
-            displayContainer.layer.masksToBounds = YES;
-            displayContainer.layer.cornerRadius = currentHeight * 0.5;
-        }
-        [self.badgeDisplayHeightMap setObject:@(currentHeight) forKey:lastHeightKey];
-    }
-    else
-    {
-        displayContainer.layer.masksToBounds = NO;
-        displayContainer.layer.cornerRadius = 0;
-    }
-}
+static inline NSArray* HHBadgeNeedDisplayObserveKeyPaths(){
+    return @[@"anchorPoint",@"origin",@"size",@"parentFrame",@"boardWidth",
+             @"contentInsets",@"centerOffsetInsets",@"horizontalPosition",@"verticalPosition",
+             @"value",@"font",@"foregroundColor",@"badgeColor",@"boardColor",@"backgroudImage",@"cornerRadius"];
+};
 
-- (NSMutableDictionary *)badgeDisplayHeightMap {
-    return _badgeDisplayHeightMap?:({
-        _badgeDisplayHeightMap = [NSMutableDictionary new];
-        _badgeDisplayHeightMap;
-    });
-}
+static inline NSArray* HHBadgeNeedLayoutObserveKeyPaths(){
+    return @[@"anchorPoint",@"origin",@"size",@"parentFrame",@"boardWidth",
+             @"contentInsets",@"centerOffsetInsets",@"horizontalPosition",@"verticalPosition",
+             @"value",@"font",@"backgroudImage"];
+};
 
+@interface HHBadgeView()
+@property (nonatomic,weak) UIView *parentView;
+@property (nonatomic,assign) CGRect parentFrame;
+@property (nonatomic,assign) HHBadgeType badgeType;
+@property (nonatomic,assign) CGRect contentFrame;
 @end
 
-#pragma mark - HHBadgeApperence
-@implementation HHBadgeApperence
-@synthesize defaultDisplayRule = _defaultDisplayRule;
+@implementation HHBadgeView
 
-- (id)copyWithZone:(NSZone *)zone {
-    HHBadgeApperence *apperence = [self.class new];
-    apperence.font = self.font;
-    apperence.anchorPoint = self.anchorPoint;
-    apperence.horizontalPosition = self.horizontalPosition;
-    apperence.verticalPosition = self.verticalPosition;
-    apperence.centerOffsetInsets = self.centerOffsetInsets;
-    apperence.contentInsets = self.contentInsets;
-    apperence.origin = self.origin;
-    apperence.size = self.size;
-    apperence.tintColor = self.tintColor;
-    apperence.backgroudColor = self.backgroudColor;
-    apperence.backgroudImage = self.backgroudImage;
-    apperence.displayRule = self.defaultDisplayRule;
-    return apperence;
-}
+#pragma mark - life
 
-- (void)reset {
-    self.displayRule = self.defaultDisplayRule;
-    self.origin = HHViewBadgeLayoutDefaultOrigin;
-    self.size = HHViewBadgeLayoutDefaultSize;
-    self.anchorPoint = CGPointMake(0.5, 0.5);
-    self.font = [UIFont systemFontOfSize:15];
-    self.backgroudColor = [UIColor redColor];
-    self.backgroudImage = nil;
-    self.tintColor = [UIColor whiteColor];
-    self.contentInsets = UIEdgeInsetsZero;
-    self.centerOffsetInsets = UIEdgeInsetsZero;
-    self.horizontalPosition = HHBadgePositionFooter;
-    self.verticalPosition = HHBadgePositionHeader;
-}
-
-- (HHBadgeDisplayRule *)defaultDisplayRule {
-    return _defaultDisplayRule?:({
-        _defaultDisplayRule = [HHBadgeDisplayRule new];
-        _defaultDisplayRule;
-    });
-}
-
-@end
-
-#pragma mark - HHBadgeManager
-@interface HHBadgeManager : NSObject
-@property (nonatomic,assign) CGRect badgeTargetFrame;
-@property (nonatomic,strong) id badgeValue;
-@property (nonatomic,strong,readonly) HHBadgeApperence *badgeApperence;
-@property (nonatomic,assign,readonly) HHBadgeType badgeType;
-@property (nonatomic,assign,readonly) CGRect badgeFrame;
-@property (nonatomic,assign,readonly) CGRect badgeDipslayContainerFrame;
-@property (nonatomic,strong,readonly) UIImageView *badgeDipslayContainer;
-@property (nonatomic,strong,readonly) UILabel *badgeLabel;
-@property (nonatomic,strong,readonly) UILabel *badgeNumberLabel;
-@property (nonatomic,strong,readonly) UIView *badgeColorView;
-@property (nonatomic,strong,readonly) UIImageView *badgeImageView;
-@property (nonatomic,strong,readonly) UIView *badgeView;
-@property (nonatomic,assign,readonly) BOOL badgeNeedLayout;
-- (void)updateLayout;
-- (void)updateLayoutIfNeed;
-- (void)updateBadgeValue;
-- (void)updateApperence;
-@end
-
-@implementation HHBadgeManager
-@synthesize badgeType = _badgeType;
-@synthesize badgeFrame = _badgeFrame;
-@synthesize badgeDipslayContainerFrame = _badgeDipslayContainerFrame;
-@synthesize badgeDipslayContainer = _badgeDipslayContainer;
-@synthesize badgeNumberLabel = _badgeNumberLabel;
-@synthesize badgeLabel = _badgeLabel;
-@synthesize badgeColorView = _badgeColorView;
-@synthesize badgeImageView = _badgeImageView;
-@synthesize badgeView = _badgeView;
-@synthesize badgeApperence = _badgeApperence;
-
-+ (NSArray*)observeLayoutKeyPaths {
-    return @[@"font",@"anchorPoint",@"horizontalPosition",
-             @"verticalPosition",@"centerOffsetInsets",@"origin",@"size"];
++ (instancetype)badgeViewWithParentView:(UIView *)parentView {
+    //1.初始化
+    HHBadgeView *badgeView = [HHBadgeView new];
+    [badgeView setParentFrame:parentView.frame];
+    [badgeView setParentView:parentView];
+    //2.添加到合适的父视图上
+    UIView *containView = parentView.superview?:parentView;
+    [containView addSubview:badgeView];
+    [parentView setHh_badge:badgeView];
+    return badgeView;
 }
 
 - (void)dealloc {
-    [[self.class observeLayoutKeyPaths] enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        [self.badgeApperence removeObserver:self forKeyPath:obj];
+    [HHBadgeNeedDisplayObserveKeyPaths() enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        [self removeObserver:self forKeyPath:obj];
     }];
-    [self removeObserver:self forKeyPath:@"badgeValue"];
-    [self removeObserver:self forKeyPath:@"badgeTargetFrame"];
 }
 
 - (instancetype)init {
     if (self = [super init]) {
-        [self addObserver:self
-               forKeyPath:@"badgeValue"
-                  options:NSKeyValueObservingOptionNew|NSKeyValueObservingOptionOld
-                  context:nil];
-        [self addObserver:self
-               forKeyPath:@"badgeTargetFrame"
-                  options:NSKeyValueObservingOptionNew|NSKeyValueObservingOptionOld
-                  context:nil];
-        [[self.class observeLayoutKeyPaths] enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-            [self.badgeApperence addObserver:self
-                                  forKeyPath:obj
-                                     options:NSKeyValueObservingOptionNew|NSKeyValueObservingOptionOld
-                                     context:nil];
+        //1.默认值
+        self.backgroundColor = [UIColor clearColor];
+        self.size = HHBadgeViewLayoutDefaultSize;
+        self.origin = HHBadgeViewLayoutDefaultOrigin;
+        self.cornerRadius = HHBadgeViewDefaultCornerRadius;
+        self.anchorPoint = CGPointMake(0.5, 0.5);
+        self.horizontalPosition = HHBadgePositionFooter;
+        self.verticalPosition = HHBadgePositionHeader;
+        self.boardWidth = 0;
+        self.centerOffsetInsets = UIEdgeInsetsZero;
+        self.contentInsets = UIEdgeInsetsZero;
+        self.font = [UIFont systemFontOfSize:15];
+        self.boardColor = [UIColor clearColor];
+        self.badgeColor = [UIColor redColor];
+        self.foregroundColor = [UIColor whiteColor];
+        self.backgroudImage = nil;
+        //2.全局设置
+        void (^apperenceBlock)() = objc_getAssociatedObject([UIApplication sharedApplication],@selector(hh_registBadgeApperenceWithBlock:));
+        if (apperenceBlock) {
+            apperenceBlock(self);
+        }
+        //3.监听变化
+        [HHBadgeNeedDisplayObserveKeyPaths() enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            [self addObserver:self
+                   forKeyPath:obj
+                      options:NSKeyValueObservingOptionNew|NSKeyValueObservingOptionOld
+                      context:nil];
         }];
     }
     return self;
@@ -191,238 +126,162 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
     id oldValue = change[@"old"];
     if (newValue || oldValue) {
         if (![newValue isEqual:oldValue]) {
-            _badgeNeedLayout = YES;
-        }
-        if ([NSStringFromClass([newValue class]) isEqualToString:NSStringFromClass([oldValue class])]) {
-            //NSNumer
-            if ([newValue isKindOfClass:[NSValue class]]) {
-                if (![newValue isEqualToValue:oldValue]) {
-                    _badgeNeedLayout = YES;
-                }
+            if ([HHBadgeNeedLayoutObserveKeyPaths() containsObject:keyPath]) {
+                [self handleUpdateLayout];
             }
-            //UIFont
-            if ([newValue isKindOfClass:[UIFont class]]) {
-            }
+            [self setNeedsDisplay];
         }
     }
 }
 
-- (void)updateBadgeValue {
-    _badgeView = nil;
+- (void)drawRect:(CGRect)rect {
+    if (CGRectGetWidth(rect) > 0 &&
+        CGRectGetHeight(rect) > 0) {
+        void (^drawText)(NSString*, CGRect) = ^(NSString *text, CGRect rect) {
+            NSMutableParagraphStyle *paragraph = [NSMutableParagraphStyle new];
+            [paragraph setAlignment:NSTextAlignmentCenter];
+            [text drawWithRect:rect
+                       options:(NSStringDrawingUsesLineFragmentOrigin|
+                                NSStringDrawingUsesFontLeading)
+                    attributes:@{NSFontAttributeName:self.font,
+                                 NSForegroundColorAttributeName:self.foregroundColor,
+                                 NSParagraphStyleAttributeName:paragraph}
+                       context:nil];
+        };
+        void (^drawImage)(UIImage* ,CGRect) = ^(UIImage *image, CGRect rect) {
+            [image drawInRect:rect blendMode:kCGBlendModeNormal alpha:1];
+        };
+        void (^drawRoundedRect)(UIColor*, CGRect, CGFloat) = ^(UIColor *color, CGRect rect, CGFloat cornerRadius) {
+            [color setFill];
+            UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:cornerRadius];
+            [path fill];
+        };
+        
+        CGRect boardRect = CGRectInset(rect, self.boardWidth, self.boardWidth);
+        CGFloat containerCornerRadius = (self.cornerRadius != HHBadgeViewDefaultCornerRadius)?self.cornerRadius:CGRectGetHeight(rect) * 0.5;
+        CGFloat boardCornerRadius = (self.cornerRadius != HHBadgeViewDefaultCornerRadius)?self.cornerRadius:CGRectGetHeight(boardRect) * 0.5;
+        UIColor *badgeColor = (self.badgeType == HHBadgeTypeDot)?self.value:self.badgeColor;
+        if (self.boardWidth > 0) {
+            drawRoundedRect(self.boardColor,rect,containerCornerRadius);
+        }
+        drawRoundedRect(badgeColor,boardRect,boardCornerRadius);
+        
+        switch (self.badgeType) {
+            case HHBadgeTypeText:drawText(self.value,_contentFrame);break;
+            case HHBadgeTypeNumber:drawText([self.value stringValue],_contentFrame);break;
+            case HHBadgeTypeImage:drawImage(self.value,_contentFrame);break;
+            case HHBadgeTypeDot:;break;
+            default:break;
+        }
+    }
+}
+
+#pragma mark - private
+- (void)handleUpdateLayout {
+    CGRect containerFrame = CGRectZero;
+    CGRect parentFrame = self.parentFrame;
+    if (CGRectGetWidth(parentFrame) > 0 && CGRectGetHeight(parentFrame) > 0) {
+        if (!CGSizeEqualToSize(self.size, HHBadgeViewLayoutDefaultSize)) {
+            containerFrame.size = self.size;
+        } else {
+            CGRect contentFrame = CGRectZero;
+            switch (self.badgeType) {
+                case HHBadgeTypeNumber:
+                    contentFrame.size = HHBadgeTextSize([self.value stringValue], self.font);
+                    break;
+                case HHBadgeTypeText:
+                    contentFrame.size = HHBadgeTextSize(self.value, self.font);
+                    break;
+                case HHBadgeTypeDot:
+                    contentFrame.size = HHBadgeViewLayoutDefaultDotSize;
+                    break;
+                case HHBadgeTypeImage:
+                    contentFrame.size = [(UIImage*)self.value size];
+                    break;
+                case HHBadgeTypeCustomView:
+                    contentFrame.size = [(UIView*)self.value bounds].size;
+                    break;
+                default:
+                    break;
+            }
+            containerFrame.size = CGSizeMake(CGRectGetWidth(contentFrame) + self.contentInsets.left + self.contentInsets.right + self.boardWidth * 2, CGRectGetHeight(contentFrame) + self.contentInsets.top + self.contentInsets.bottom + self.boardWidth * 2);
+        }
+        
+        if (!CGPointEqualToPoint(self.origin, HHBadgeViewLayoutDefaultOrigin)) {
+            containerFrame.origin = self.origin;
+        } else {
+            CGFloat containX = 0;
+            CGFloat containY = 0;
+            switch (self.horizontalPosition)
+            {
+                case HHBadgePositionHeader:containX = 0;break;
+                case HHBadgePositionCenter:containX = CGRectGetWidth(parentFrame) * 0.5;break;
+                case HHBadgePositionFooter:containX = CGRectGetWidth(parentFrame);break;
+                default:break;
+            }
+            switch (self.verticalPosition)
+            {
+                case HHBadgePositionHeader:containY = 0;break;
+                case HHBadgePositionCenter:containY = CGRectGetHeight(parentFrame) * 0.5;break;
+                case HHBadgePositionFooter:containY = CGRectGetHeight(parentFrame);break;
+                default:break;
+            }
+            CGFloat anchorPointX = MIN(1,MAX(0, self.anchorPoint.x));
+            CGFloat anchorPointY = MIN(1,MAX(0, self.anchorPoint.y));
+            containX = containX - anchorPointX * CGRectGetWidth(containerFrame);
+            containX = containX + self.centerOffsetInsets.left - self.centerOffsetInsets.right;
+            containY = containY - anchorPointY * CGRectGetHeight(containerFrame);
+            containY = containY + self.centerOffsetInsets.top - self.centerOffsetInsets.bottom;
+            containerFrame.origin = CGPointMake(containX, containY);
+            if ([self.parentView.superview isEqual:self.superview]) {
+                containerFrame.origin = [self.parentView.superview convertPoint:containerFrame.origin fromView:self.parentView];
+            }
+        }
+    }
+
+    _contentFrame.origin = CGPointMake(self.contentInsets.left + self.boardWidth, self.contentInsets.top + self.boardWidth);
+    _contentFrame.size = CGSizeMake(CGRectGetWidth(containerFrame) - self.contentInsets.left - self.contentInsets.right - 2 * self.boardWidth, CGRectGetHeight(containerFrame) - self.contentInsets.top - self.contentInsets.bottom - 2 * self.boardWidth);
+    
+    self.frame = containerFrame;
+}
+
+#pragma mark - set/get
+- (void)setValue:(id)value {
+    _value = value;
     _badgeType = HHBadgeTypeNot;
-    id badgeValue = self.badgeValue;
     //1.数字类型
-    if ([badgeValue isKindOfClass:[NSNumber class]]) {
-        [self.badgeNumberLabel setText:[badgeValue stringValue]];
-        _badgeView = self.badgeNumberLabel;
+    if ([value isKindOfClass:[NSNumber class]]) {
         _badgeType = HHBadgeTypeNumber;
     }
     //2.文本类型
-    if ([badgeValue isKindOfClass:[NSString class]]) {
-        [self.badgeLabel setText:badgeValue];
-        _badgeView = self.badgeLabel;
+    if ([value isKindOfClass:[NSString class]]) {
         _badgeType = HHBadgeTypeText;
     }
     //3.图片类型
-    if ([badgeValue isKindOfClass:[UIImage class]]) {
-        [self.badgeImageView setImage:badgeValue];
-        _badgeView = self.badgeImageView;
+    if ([value isKindOfClass:[UIImage class]]) {
         _badgeType = HHBadgeTypeImage;
     }
     //5.颜色类型
-    if ([badgeValue isKindOfClass:[UIColor class]]) {
-        [self.badgeColorView setBackgroundColor:badgeValue];
-        _badgeView = self.badgeColorView;
+    if ([value isKindOfClass:[UIColor class]]) {
         _badgeType = HHBadgeTypeDot;
     }
     //6.视图类型
-    if ([badgeValue isKindOfClass:[UIView class]]) {
-        _badgeView = badgeValue;
+    if ([value isKindOfClass:[UIView class]]) {
         _badgeType = HHBadgeTypeCustomView;
     }
 }
 
-- (void)updateLayoutIfNeed {
-    if (_badgeNeedLayout) {
-        [self updateLayout];
-        _badgeNeedLayout = NO;
-    }
+- (void)setBackgroundColor:(UIColor *)backgroundColor {
+    [super setBackgroundColor:[UIColor clearColor]];
 }
 
-- (void)updateLayout {;
-    CGRect containerFrame = CGRectZero;
-    CGRect targetFrame = self.badgeTargetFrame;
-    if (CGRectGetWidth(targetFrame) > 0 && CGRectGetHeight(targetFrame) > 0) {
-        if (!CGSizeEqualToSize(self.badgeApperence.size, HHViewBadgeLayoutDefaultSize)) {
-            containerFrame.size = self.badgeApperence.size;
-        } else {
-            CGRect badgeFrame = CGRectZero;
-            switch (self.badgeType) {
-                case HHBadgeTypeNumber:
-                    badgeFrame.size = HHBadgeTextBound(self.badgeNumberLabel.text, self.badgeNumberLabel.font).size;
-                    break;
-                case HHBadgeTypeText:
-                    badgeFrame.size = HHBadgeTextBound(self.badgeLabel.text, self.badgeLabel.font).size;
-                    break;
-                case HHBadgeTypeImage:
-                    badgeFrame.size = self.badgeImageView.image.size;
-                    break;
-                case HHBadgeTypeDot:
-                    badgeFrame.size = HHViewBadgeLayoutDefaultDotSize;
-                    break;
-                case HHBadgeTypeCustomView:
-                    badgeFrame.size = self.badgeView.bounds.size;
-                    break;
-                default:
-                    break;
-            }
-            containerFrame.size = CGSizeMake(CGRectGetWidth(badgeFrame) + self.badgeApperence.contentInsets.left + self.badgeApperence.contentInsets.right, CGRectGetHeight(badgeFrame) + self.badgeApperence.contentInsets.top + self.badgeApperence.contentInsets.bottom);
-            if ([self.badgeApperence.displayRule respondsToSelector:@selector(badgeAdjustDisplayContainerSize:andBadgeType:andApperence:)] && CGRectGetWidth(containerFrame) > 0 && CGRectGetHeight(containerFrame) ) {
-                containerFrame.size = [self.badgeApperence.displayRule badgeAdjustDisplayContainerSize:containerFrame.size andBadgeType:_badgeType andApperence:_badgeApperence];
-            }
-        }
-        
-        if (!CGPointEqualToPoint(self.badgeApperence.origin, HHViewBadgeLayoutDefaultOrigin)) {
-            containerFrame.origin = self.badgeApperence.origin;
-        } else {
-            CGFloat containX = 0;
-            CGFloat containY = 0;
-            switch (self.badgeApperence.horizontalPosition)
-            {
-                case HHBadgePositionHeader:containX = 0;break;
-                case HHBadgePositionCenter:containX = CGRectGetWidth(targetFrame) * 0.5;break;
-                case HHBadgePositionFooter:containX = CGRectGetWidth(targetFrame);break;
-                default:break;
-            }
-            switch (self.badgeApperence.verticalPosition)
-            {
-                case HHBadgePositionHeader:containY = 0;break;
-                case HHBadgePositionCenter:containY = CGRectGetHeight(targetFrame) * 0.5;break;
-                case HHBadgePositionFooter:containY = CGRectGetHeight(targetFrame);break;
-                default:break;
-            }
-            CGFloat anchorPointX = MIN(1,MAX(0, self.badgeApperence.anchorPoint.x));
-            CGFloat anchorPointY = MIN(1,MAX(0, self.badgeApperence.anchorPoint.y));
-            containX = containX - anchorPointX * CGRectGetWidth(containerFrame);
-            containX = containX + self.badgeApperence.centerOffsetInsets.left - self.badgeApperence.centerOffsetInsets.right;
-            containY = containY - anchorPointY * CGRectGetHeight(containerFrame);
-            containY = containY + self.badgeApperence.centerOffsetInsets.top - self.badgeApperence.centerOffsetInsets.bottom;
-            containerFrame.origin = CGPointMake(containX, containY);
-        }
-        
-        if ([self.badgeApperence.displayRule respondsToSelector:@selector(badgeAdjustDisplayContainerStyle:withContainerSize:andBadgeType:andApperence:)]) {
-            [self.badgeApperence.displayRule badgeAdjustDisplayContainerStyle:_badgeDipslayContainer withContainerSize:containerFrame.size andBadgeType:_badgeType andApperence:_badgeApperence];
-        }
-    }
-    _badgeDipslayContainerFrame = containerFrame;
-    if (self.badgeType == HHBadgeTypeDot) {
-        _badgeFrame = (CGRect){CGPointZero,_badgeDipslayContainerFrame.size};
-    } else {
-        _badgeFrame.origin = CGPointMake(self.badgeApperence.contentInsets.left, self.badgeApperence.contentInsets.bottom);
-        _badgeFrame.size = CGSizeMake(CGRectGetWidth(_badgeDipslayContainerFrame) - self.badgeApperence.contentInsets.left - self.badgeApperence.contentInsets.right, CGRectGetHeight(_badgeDipslayContainerFrame) - self.badgeApperence.contentInsets.top - self.badgeApperence.contentInsets.bottom);
-    }
-}
-
-- (void)updateApperence {
-    [self handleUpdateBadgeView:self.badgeView
-                      badgeType:self.badgeType
-                      apperence:self.badgeApperence];
-    [self handleUpdateDisplayContainerApperence];
-}
-
-- (void)handleUpdateDisplayContainerApperence {
-    [self.badgeDipslayContainer setImage:self.badgeApperence.backgroudImage];
-    [self.badgeDipslayContainer setBackgroundColor:self.badgeApperence.backgroudColor];
-}
-
-- (void)handleUpdateBadgeView:(UIView*)badgeView badgeType:(HHBadgeType)type apperence:(HHBadgeApperence*)apperence {
-    if (type != HHBadgeTypeNot) {
-        if (type != HHBadgeTypeCustomView) {
-            badgeView.backgroundColor = [UIColor clearColor];
-            switch (type) {
-                case HHBadgeTypeText:
-                case HHBadgeTypeNumber:
-                {
-                    UILabel *label = (UILabel*)badgeView;
-                    label.font = apperence.font;
-                    label.textColor = apperence.tintColor;
-                    label.textAlignment = NSTextAlignmentCenter;
-                }
-                    break;
-                case HHBadgeTypeImage:
-                {
-                    UIImageView *imageView = (UIImageView*)badgeView;
-                    imageView.backgroundColor = [UIColor clearColor];
-                }
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-}
-
-- (UIView *)badgeColorView {
-    return _badgeColorView?:({
-        _badgeColorView = [UIView new];
-        [self handleUpdateBadgeView:_badgeColorView
-                          badgeType:HHBadgeTypeDot
-                          apperence:self.badgeApperence];
-        _badgeColorView;
-    });
-}
-
-- (UILabel *)badgeNumberLabel {
-    return _badgeNumberLabel?:({
-        _badgeNumberLabel = [UILabel new];
-        [self handleUpdateBadgeView:_badgeNumberLabel
-                          badgeType:HHBadgeTypeNumber
-                          apperence:self.badgeApperence];
-        _badgeNumberLabel;
-    });
-}
-
-- (UILabel *)badgeLabel {
-    return _badgeLabel?:({
-        _badgeLabel = [UILabel new];
-        [self handleUpdateBadgeView:_badgeLabel
-                          badgeType:HHBadgeTypeText
-                          apperence:self.badgeApperence];
-        _badgeLabel;
-    });
-}
-
-- (UIImageView *)badgeDipslayContainer {
-    return _badgeDipslayContainer?:({
-        _badgeDipslayContainer = [UIImageView new];
-        _badgeDipslayContainer.layer.shouldRasterize = YES;
-        _badgeDipslayContainer.layer.rasterizationScale = [UIScreen mainScreen].scale;
-        _badgeDipslayContainer.contentMode = UIViewContentModeScaleAspectFit;
-        [self handleUpdateDisplayContainerApperence];
-        _badgeDipslayContainer;
-    });
-}
-
-- (HHBadgeApperence *)badgeApperence {
-    return _badgeApperence?:({
-        _badgeApperence = [[UIView hh_badgeApperence] copy];
-        _badgeApperence;
-    });
-}
-
-@end
-
-#pragma mark - HHAddBadge
-@interface UIView()
-@property (nonatomic,strong) HHBadgeManager *badgeManager;
 @end
 
 @implementation UIView (HHAddBadge)
 
-#pragma mark - life
 + (void)load {
     SEL originalSEL = @selector(setFrame:);
-    SEL newSEL = @selector(hh_setFrame:);
+    SEL newSEL = @selector(hh_swizzle_setFrame:);
     Method originalMethod = class_getInstanceMethod(self, originalSEL);
     Method newMethod = class_getInstanceMethod(self, newSEL);
     class_addMethod(self,
@@ -437,119 +296,70 @@ static inline CGRect HHBadgeTextBound(NSString *text, UIFont *font) {
                                    class_getInstanceMethod(self, newSEL));
 }
 
-+ (HHBadgeApperence *)hh_badgeApperence {
-    static HHBadgeApperence *apperence = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        apperence = [HHBadgeApperence new];
-        [apperence reset];
-    });
-    return apperence;
++ (void)hh_registBadgeApperenceWithBlock:(void (^)(HHBadgeView *))apperenceBlock {
+    objc_setAssociatedObject([UIApplication sharedApplication], _cmd, apperenceBlock, OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
+
+- (void)hh_swizzle_setFrame:(CGRect)frame {
+    [self hh_swizzle_setFrame:frame];
+    if (objc_getAssociatedObject(self, @selector(hh_badge))) {
+        self.hh_badge.parentFrame = frame;
+    }
 }
 
 - (void)hh_remove {
-    [self.badgeManager.badgeDipslayContainer removeFromSuperview];
-    if (objc_getAssociatedObject(self, @selector(setBadgeManager:))) {
-        self.badgeManager = nil;
-    }
+    self.hh_badge = nil;
 }
 
-- (void)hh_updateBadgeValue:(id)badgeValue apperence:(void (^)(HHBadgeApperence *))apperenceBlock {
-    if (apperenceBlock) {
-        apperenceBlock(self.badgeManager.badgeApperence);
-        [self.badgeManager updateApperence];
-    }
-    [self hh_updateBadgeValue:badgeValue];
+- (void)setHh_badge:(HHBadgeView *)hh_badge {
+    objc_setAssociatedObject(self, @selector(hh_badge), hh_badge, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
-- (void)hh_updateBadgeValue:(id)badgeValue {
-    [self setHh_badgeValue:badgeValue];
-}
-
-- (void)hh_updateApperence:(void (^)(HHBadgeApperence *))apperenceBlock {
-    if (apperenceBlock) {
-        apperenceBlock(self.badgeManager.badgeApperence);
-        [self.badgeManager updateApperence];
-        [self handleUpdateLayout];
-    }
-}
-
-- (void)hh_setFrame:(CGRect)frame {
-    [self hh_setFrame:frame];
-    if (self.hh_badgeView) {
-        [self handleUpdateLayout];
-    }
-}
-
-#pragma mark - private
-- (void)handleUpdateLayout {
-    [self.badgeManager setBadgeTargetFrame:self.frame];
-    [self.badgeManager updateLayoutIfNeed];
-    [self.hh_badgeView setFrame:self.badgeManager.badgeFrame];
-    [self.badgeManager.badgeDipslayContainer setFrame:({
-        CGRect containerFrame = self.badgeManager.badgeDipslayContainerFrame;
-        if ([self.superview isEqual:self.badgeManager.badgeDipslayContainer.superview]) {
-            containerFrame = [self.superview convertRect:containerFrame fromView:self];
-        }
-        containerFrame;
-    })];
-    [self.badgeManager.badgeDipslayContainer.superview bringSubviewToFront:self.badgeManager.badgeDipslayContainer];
-}
-
-- (void)handleUpdateBadgeValue {
-    if (self.hh_badgeValue)
-    {
-        if (!self.badgeManager.badgeDipslayContainer.superview) {
-            UIView *container = self;
-            if (container.superview) {
-                container = container.superview;
-            }
-            [container addSubview:self.badgeManager.badgeDipslayContainer];
-        }
-        [self.hh_badgeView removeFromSuperview];
-        [self.badgeManager setBadgeValue:self.hh_badgeValue];
-        [self.badgeManager updateBadgeValue];
-        [self setHh_badgeView:self.badgeManager.badgeView];
-        [self.badgeManager.badgeDipslayContainer addSubview:self.hh_badgeView];
-        [self handleUpdateLayout];
-    }
-    else
-    {
-        [self hh_remove];
-    }
-}
-
-#pragma mark - set/get
-- (void)setHh_badgeValue:(id)hh_badgeValue {
-    objc_setAssociatedObject(self, @selector(hh_badgeValue), hh_badgeValue, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    [self handleUpdateBadgeValue];
-}
-
-- (void)setHh_badgeView:(UIView *)hh_badgeView {
-    objc_setAssociatedObject(self, @selector(hh_badgeView), hh_badgeView, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
-
-- (id)hh_badgeValue {
-    return objc_getAssociatedObject(self, _cmd);
-}
-
-- (UIView *)hh_badgeView {
-    return objc_getAssociatedObject(self, _cmd);
-}
-
-- (CGRect)hh_badgeViewFrame {
-    return self.badgeManager.badgeFrame;
-}
-
-- (CGRect)hh_badgeDisplayContainerFrame {
-    return self.badgeManager.badgeDipslayContainerFrame;
-}
-
-- (HHBadgeManager *)badgeManager {
+- (HHBadgeView *)hh_badge {
     return objc_getAssociatedObject(self, _cmd)?:({
-        HHBadgeManager *manager = [HHBadgeManager new];
-        objc_setAssociatedObject(self, _cmd, manager, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        manager;
+        HHBadgeView *badgeView = [HHBadgeView badgeViewWithParentView:self];
+        objc_setAssociatedObject(self, _cmd, badgeView, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        badgeView;
+    });
+}
+
+@end
+
+@implementation UIBarItem(HHAddBadge)
+
+- (UIView*)hh_view {
+    return [self valueForKeyPath:@"_view"];
+}
+
+- (UIImageView *)hh_imageView {
+    return objc_getAssociatedObject(self, _cmd)?:({
+        __block UIImageView *imageView = nil;
+        [[self hh_view].subviews enumerateObjectsUsingBlock:^(__kindof UIView * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            if ([obj isKindOfClass:[UIImageView class]]) {
+                imageView = (UIImageView*)obj;
+                if ([imageView.image isEqual:self.image]) {
+                    objc_setAssociatedObject(self, _cmd, imageView, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                    *stop = YES;
+                }
+            }
+        }];
+        imageView;
+    });
+}
+
+- (UILabel *)hh_titleLabel {
+    return objc_getAssociatedObject(self, _cmd)?:({
+        __block UILabel *titleLabel = nil;
+        [[self hh_view].subviews enumerateObjectsUsingBlock:^(__kindof UIView * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            if ([obj isKindOfClass:[UILabel class]]) {
+                titleLabel = (UILabel*)obj;
+                if ([titleLabel.text isEqualToString:self.title]) {
+                    objc_setAssociatedObject(self, _cmd, titleLabel, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                    *stop = YES;
+                }
+            }
+        }];
+        titleLabel;
     });
 }
 

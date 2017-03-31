@@ -1,12 +1,14 @@
 //
 //  UIView+HHAddBadge.h
-//  UIView+HHAddBadge
+//  UIView-HHAddBadge
 //
-//  Created by YunSL on 17/3/10.
+//  Created by YunSL on 17/3/30.
 //  Copyright © 2017年 YunSL. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
+
+#define HHBadgeDot [UIColor redColor]
 
 /**
  附属视图相对依附对象的位置
@@ -21,82 +23,34 @@ typedef NS_ENUM(NSInteger,HHBadgePosition) {
     HHBadgePositionFooter
 };
 
+@interface HHBadgeView : UIView
+@property (nonatomic,strong) UIColor *badgeColor;
 /**
- badge的类型
- 
- - HHBadgeTypeNot:    无
- - HHBadgeTypeNumber: 数字
- - HHBadgeTypeText:   文本
- - HHBadgeTypeImage:  图片
- - HHBadgeTypeDot:    小圆点
- - HHBadgeTypeCustom: 自定义
+ 附属视图的值/NSString/NSNumer/UIColor/UIImage/UIView
  */
-typedef NS_ENUM(NSInteger,HHBadgeType) {
-    HHBadgeTypeNot = 0,
-    HHBadgeTypeNumber,
-    HHBadgeTypeText,
-    HHBadgeTypeImage,
-    HHBadgeTypeDot,
-    HHBadgeTypeCustomView
-};
-
-#pragma mark - HHBadgeDisplayRule
-@class HHBadgeApperence;
-@protocol HHBadgeDisplayRule <NSObject>
-@optional
+@property (nonatomic,strong) id value;
 /**
- 调整badge显示容器的size
-
- @param displayContainerSize  badge显示容器的当前size
- @param badgeType             badge类型
- @param apperence             badge的样式模型
- @return CGSize
+ 附属视图前景色/文本颜色,默认为[UIColor whiteColor]
  */
-- (CGSize)badgeAdjustDisplayContainerSize:(CGSize)displayContainerSize
-                             andBadgeType:(HHBadgeType)badgeType
-                             andApperence:(HHBadgeApperence*)apperence;
+@property (nonatomic,strong) UIColor *foregroundColor;
 /**
- 调整badge显示容器的风格/可以在此处设置显示的圆角,边线,阴影...
- 
- @param displayContainer     badge显示容器视图
- @param displayContainerSize badge显示容器的当前size
- @param badgeType            badge类型
- @param apperence            badge的样式模型
+ 附属视图的圆角属性,默认为视图高度一半
  */
-- (void)badgeAdjustDisplayContainerStyle:(UIView*)displayContainer
-                       withContainerSize:(CGSize)displayContainerSize
-                            andBadgeType:(HHBadgeType)badgeType
-                            andApperence:(HHBadgeApperence*)apperence;
-@end
-
-#pragma mark - HHBadgeDisplayRule
-@interface HHBadgeDisplayRule : NSObject<HHBadgeDisplayRule>
-@end
-
-#pragma mark - HHBadgeApperence
-@interface HHBadgeApperence : NSObject<NSCopying>
+@property (nonatomic,assign) CGFloat cornerRadius;
 /**
- 附属视图显示规则
+ 附属视图的边线颜色,默认为nil
  */
-@property (nonatomic,weak) id <HHBadgeDisplayRule> displayRule;
+@property (nonatomic,strong) UIColor *boardColor;
 /**
- 附属视图默认显示规则
+ 附属视图的边线宽度,默认为0
  */
-@property (nonatomic,strong,readonly) HHBadgeDisplayRule *defaultDisplayRule;
+@property (nonatomic,assign) CGFloat boardWidth;
 /**
- 附属视图主题色
- */
-@property (nonatomic,strong) UIColor *tintColor;
-/**
- 附属视图背景颜色
- */
-@property (nonatomic,strong) UIColor *backgroudColor;
-/**
- 附属视图背景图片
+ 附属视图背景图片,默认为nil
  */
 @property (nonatomic,strong) UIImage *backgroudImage;
 /**
- 附属视图的字体(当hh_badgeValue为NSNumber或NSString时有效)
+ 附属视图的字体/当hh_badgeValue为NSNumber或NSString时有效,默认为[UIFont systemFontOfSize:15]
  */
 @property (nonatomic,strong) UIFont *font;
 /**
@@ -112,11 +66,11 @@ typedef NS_ENUM(NSInteger,HHBadgeType) {
  */
 @property (nonatomic,assign) HHBadgePosition verticalPosition;
 /**
- 附属视图中心点相对父视图的偏移量
+ 附属视图中心点相对父视图的偏移量,默认为UIEdgeInsetsZero
  */
 @property (nonatomic,assign) UIEdgeInsets centerOffsetInsets;
 /**
- 附属视图内边距
+ 附属视图内边距,默认为UIEdgeInsetsZero
  */
 @property (nonatomic,assign) UIEdgeInsets contentInsets;
 /**
@@ -128,21 +82,56 @@ typedef NS_ENUM(NSInteger,HHBadgeType) {
  */
 @property (nonatomic,assign) CGSize size;
 /**
- 重置为默认参数
+ 初始化一个HHBadgeView,将自动添加到parentView上
+
+ @param parentView 添加的对象视图
+ @return HHBadgeView
  */
-- (void)reset;
++ (instancetype)badgeViewWithParentView:(UIView*)parentView;
 @end
 
-#pragma mark - API
 @interface UIView (HHAddBadge)
-@property (nonatomic,strong) id hh_badgeValue;
-@property (nonatomic,strong,readonly) UIView *hh_badgeView;
-@property (nonatomic,assign,readonly) CGRect hh_badgeViewFrame;
-@property (nonatomic,assign,readonly) CGRect hh_badgeDisplayContainerFrame;
-+ (HHBadgeApperence*)hh_badgeApperence;
+/**
+ 懒加载的HHBadgeView
+ */
+@property (nonatomic,strong) HHBadgeView *hh_badge;
+/**
+ HHBadgeView全局配置/init时调用
+
+ @param apperenceBlock 配置Block
+ */
++ (void)hh_registBadgeApperenceWithBlock:(void(^)(HHBadgeView *badgeView))apperenceBlock;
+/**
+ 移除当前HHBadgeView
+ */
 - (void)hh_remove;
-- (void)hh_updateBadgeValue:(id)badgeValue;
-- (void)hh_updateBadgeValue:(id)badgeValue
-                  apperence:(void(^)(HHBadgeApperence *apperence))apperenceBlock;
-- (void)hh_updateApperence:(void(^)(HHBadgeApperence *apperence))apperenceBlock;
+@end
+
+/**
+ 给系统导航栏控件或标签栏控件添加badge
+ 1.UINavigationItem
+ viewController.navigationItem.rightBarButtonItem.hh_titleLabel
+ 2.UITabBarItem:
+ viewController.tabBarItem.hh_titleLabel无法正常显示
+ => viewController.tabBarController.tabBar.items[index].hh_titleLabel
+ */
+@interface UIBarItem(HHAddBadge)
+/**
+ UIBarItem对应的view/UIBarItem->view
+
+ @return UIView
+ */
+- (UIView*)hh_view;
+/**
+ UIBarItem上的图片视图
+
+ @return UIImageView/UIBarItem->image
+ */
+- (UIImageView *)hh_imageView;
+/**
+ UIBarItem上的文本视图/UIBarItem->title
+ 
+ @return UIImageView
+ */
+- (UILabel *)hh_titleLabel;
 @end
