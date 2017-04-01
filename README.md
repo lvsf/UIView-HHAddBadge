@@ -22,6 +22,8 @@ xib.hh_badge.value = @"xib";
 xib.hh_badge.boardWidth = 1;
 xib.hh_badge.boardColor = [UIColor whiteColor];
 xib.xibSwitch.hh_badge.value = [UIColor redColor];
+xib.xibSwitch.hh_badge.boardWidth = 1;
+xib.xibSwitch.hh_badge.boardColor = [UIColor whiteColor];
 xib.xibLabel.hh_badge.value = [UIImage imageNamed:@"小心心"];
 xib.xibLabel.hh_badge.backgroundColor = [UIColor clearColor];
 xib.backgroundColor = [UIColor orangeColor];
@@ -31,7 +33,7 @@ xib.backgroundColor = [UIColor orangeColor];
 * code
 ``` objective-c
 UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
-btn.titleLabel.hh_badge.value = @"sizeToFit";
+btn.titleLabel.hh_badge.value = @"123456";
 btn.titleLabel.hh_badge.hh_badge.value = [UIColor whiteColor];
 btn.imageView.hh_badge.value = [UIColor yellowColor];
 btn.imageView.hh_badge.horizontalPosition = HHBadgePositionFooter;
@@ -59,8 +61,8 @@ self.navigationItem.rightBarButtonItem.hh_titleLabel.hh_badge.value = [UIColor r
 * HHBadgeView
 ``` objective-c
 HHBadgeView *badgeView = [HHBadgeView badgeViewWithParentView:self.tabBarController.tabBar];
-badgeView.value = @"tabBar";
+badgeView.value = @"1";
 badgeView.horizontalPosition = HHBadgePositionCenter;
 ```
 * 运行结果
-<img alt="ScreenShot BarButtonItem" src="http://img0.ph.126.net/eoL3RZw3Y8Hr1wFtXu4a6w==/6632255238256952526.png" width="320px"/>
+<img alt="ScreenShot BarButtonItem" src="http://img0.ph.126.net/etSVVQYdJcaz4pjI-vLXgA==/6631969365236403486.png" width="320px"/>
