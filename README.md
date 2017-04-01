@@ -4,9 +4,9 @@
 * 全局配置
 ``` objective-c
 [UIView hh_setupBadgeApperenceWithBlock:^(HHBadgeView *badgeView) {
-badgeView.font = [UIFont systemFontOfSize:15];
-badgeView.horizontalPosition = HHBadgePositionFooter;
-badgeView.verticalPosition = HHBadgePositionHeader;
+    badgeView.font = [UIFont systemFontOfSize:15];
+    badgeView.horizontalPosition = HHBadgePositionFooter;
+    badgeView.verticalPosition = HHBadgePositionHeader;
 }];
 ```
 * xib
