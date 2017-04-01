@@ -39,30 +39,49 @@ static inline CGSize HHBadgeTextSize(NSString *text, UIFont *font) {
                    NSStringDrawingUsesFontLeading
                                   attributes:@{NSFontAttributeName:font}
                                      context:nil].size;
-    size.width += font.lineHeight * 0.3;
+    size.width += font.lineHeight * 0.35;
     if (size.width < size.height) {
         size.width = size.height;
     }
     return size;
 };
-
-static inline NSArray* HHBadgeNeedDisplayObserveKeyPaths(){
-    return @[@"anchorPoint",@"origin",@"size",@"parentFrame",@"boardWidth",
-             @"contentInsets",@"centerOffsetInsets",@"horizontalPosition",@"verticalPosition",
-             @"value",@"font",@"foregroundColor",@"badgeColor",@"boardColor",@"backgroudImage",@"cornerRadius"];
+/**
+ 影响size的属性
+ 
+ @return NSArray
+ */
+static inline NSArray* HHBadgeNeedLayoutSizeObserveKeyPaths(){
+    return @[@"contentInsets",@"value",@"font",@"size",@"boardWidth",@"parentBounds"];
 };
-
-static inline NSArray* HHBadgeNeedLayoutObserveKeyPaths(){
-    return @[@"anchorPoint",@"origin",@"size",@"parentFrame",@"boardWidth",
-             @"contentInsets",@"centerOffsetInsets",@"horizontalPosition",@"verticalPosition",
-             @"value",@"font",@"backgroudImage"];
+/**
+ 影响Origin的属性
+ 
+ @return NSArray
+ */
+static inline NSArray* HHBadgeNeedLayoutOriginObserveKeyPaths(){
+    NSMutableArray *keyPaths = HHBadgeNeedLayoutSizeObserveKeyPaths().mutableCopy;
+    [keyPaths addObjectsFromArray:@[@"centerOffsetInsets",@"horizontalPosition",@"verticalPosition",
+                                    @"origin",@"anchorPoint"]];
+    return keyPaths.copy;
+};
+/**
+ 影响显示的属性
+ 
+ @return NSArray
+ */
+static inline NSArray* HHBadgeNeedDisplayObserveKeyPaths(){
+    NSMutableArray *keyPaths = HHBadgeNeedLayoutOriginObserveKeyPaths().mutableCopy;
+    [keyPaths addObjectsFromArray:@[@"backgroundColor",@"foregroundColor",@"boardColor",@"cornerRadius"]];
+    return keyPaths.copy;
 };
 
 @interface HHBadgeView()
 @property (nonatomic,weak) UIView *parentView;
-@property (nonatomic,assign) CGRect parentFrame;
-@property (nonatomic,assign) HHBadgeType badgeType;
+@property (nonatomic,assign) CGRect parentBounds;
 @property (nonatomic,assign) CGRect contentFrame;
+@property (nonatomic,assign) CGRect containFrame;
+@property (nonatomic,assign) HHBadgeType badgeType;
+@property (nonatomic,strong) UIColor *badgeColor;
 @end
 
 @implementation HHBadgeView
@@ -70,13 +89,10 @@ static inline NSArray* HHBadgeNeedLayoutObserveKeyPaths(){
 #pragma mark - life
 
 + (instancetype)badgeViewWithParentView:(UIView *)parentView {
-    //1.初始化
     HHBadgeView *badgeView = [HHBadgeView new];
-    [badgeView setParentFrame:parentView.frame];
+    [badgeView setParentBounds:parentView.bounds];
     [badgeView setParentView:parentView];
-    //2.添加到合适的父视图上
-    UIView *containView = parentView.superview?:parentView;
-    [containView addSubview:badgeView];
+    [parentView addSubview:badgeView];
     [parentView setHh_badge:badgeView];
     return badgeView;
 }
@@ -90,7 +106,6 @@ static inline NSArray* HHBadgeNeedLayoutObserveKeyPaths(){
 - (instancetype)init {
     if (self = [super init]) {
         //1.默认值
-        self.backgroundColor = [UIColor clearColor];
         self.size = HHBadgeViewLayoutDefaultSize;
         self.origin = HHBadgeViewLayoutDefaultOrigin;
         self.cornerRadius = HHBadgeViewDefaultCornerRadius;
@@ -100,13 +115,14 @@ static inline NSArray* HHBadgeNeedLayoutObserveKeyPaths(){
         self.boardWidth = 0;
         self.centerOffsetInsets = UIEdgeInsetsZero;
         self.contentInsets = UIEdgeInsetsZero;
-        self.font = [UIFont systemFontOfSize:15];
         self.boardColor = [UIColor clearColor];
-        self.badgeColor = [UIColor redColor];
         self.foregroundColor = [UIColor whiteColor];
-        self.backgroudImage = nil;
+        self.backgroundColor = [UIColor redColor];
+        self.font = [UIFont systemFontOfSize:15];
+        self.containFrame = CGRectZero;
+        self.contentFrame = CGRectZero;
         //2.全局设置
-        void (^apperenceBlock)() = objc_getAssociatedObject([UIApplication sharedApplication],@selector(hh_registBadgeApperenceWithBlock:));
+        void (^apperenceBlock)() = objc_getAssociatedObject([UIApplication sharedApplication],@selector(hh_setupBadgeApperenceWithBlock:));
         if (apperenceBlock) {
             apperenceBlock(self);
         }
@@ -126,12 +142,97 @@ static inline NSArray* HHBadgeNeedLayoutObserveKeyPaths(){
     id oldValue = change[@"old"];
     if (newValue || oldValue) {
         if (![newValue isEqual:oldValue]) {
-            if ([HHBadgeNeedLayoutObserveKeyPaths() containsObject:keyPath]) {
-                [self handleUpdateLayout];
+            if ([HHBadgeNeedLayoutSizeObserveKeyPaths() containsObject:keyPath]) {
+                [self setNeedsLayoutSize];
             }
-            [self setNeedsDisplay];
+            if ([HHBadgeNeedLayoutOriginObserveKeyPaths() containsObject:keyPath]) {
+                [self setNeedsLayoutOrigin];
+                [self setFrame:_containFrame];
+            }
+            if ([HHBadgeNeedDisplayObserveKeyPaths() containsObject:keyPath]) {
+                if (!CGRectEqualToRect(CGRectZero, _containFrame)) {
+                    [self setNeedsDisplayInRect:_containFrame];
+                }
+            }
         }
     }
+}
+
+- (void)setNeedsLayoutSize {
+    CGSize containSize = CGSizeZero;
+    CGSize contentSize = CGSizeZero;
+    CGSize parentSize = self.parentBounds.size;
+    if (parentSize.width > 0 &&
+        parentSize.height > 0 &&
+        self.badgeType != HHBadgeTypeNot) {
+        if (!CGSizeEqualToSize(self.size, HHBadgeViewLayoutDefaultSize)) {
+            containSize = self.size;
+            contentSize = CGSizeMake(containSize.width - self.contentInsets.left - self.contentInsets.right - 2 * self.boardWidth, containSize.height - self.contentInsets.top - self.contentInsets.bottom - 2 * self.boardWidth);
+        } else {
+            switch (self.badgeType) {
+                case HHBadgeTypeNumber:
+                    contentSize = HHBadgeTextSize([self.value stringValue], self.font);
+                    break;
+                case HHBadgeTypeText:
+                    contentSize = HHBadgeTextSize(self.value, self.font);
+                    break;
+                case HHBadgeTypeDot:
+                    contentSize = HHBadgeViewLayoutDefaultDotSize;
+                    break;
+                case HHBadgeTypeImage:
+                    contentSize = [(UIImage*)self.value size];
+                    break;
+                case HHBadgeTypeCustomView:
+                    contentSize = [(UIView*)self.value bounds].size;
+                    break;
+                default:
+                    break;
+            }
+            containSize = CGSizeMake(contentSize.width + self.contentInsets.left + self.contentInsets.right + self.boardWidth * 2, contentSize.height + self.contentInsets.top + self.contentInsets.bottom + self.boardWidth * 2);
+        }
+    }
+    _containFrame.size = containSize;
+    _contentFrame.size = contentSize;
+}
+
+- (void)setNeedsLayoutOrigin {
+    CGPoint containOrigin = CGPointZero;
+    CGPoint contentOrigin = CGPointZero;
+    CGSize parentSize = self.parentBounds.size;
+    if (parentSize.width > 0 &&
+        parentSize.height > 0 &&
+        self.badgeType != HHBadgeTypeNot) {
+        if (!CGPointEqualToPoint(self.origin, HHBadgeViewLayoutDefaultOrigin)) {
+            containOrigin = self.origin;
+        } else {
+            CGFloat containX = 0;
+            CGFloat containY = 0;
+            switch (self.horizontalPosition)
+            {
+                case HHBadgePositionHeader:containX = 0;break;
+                case HHBadgePositionCenter:containX = parentSize.width * 0.5;break;
+                case HHBadgePositionFooter:containX = parentSize.width;break;
+                default:break;
+            }
+            switch (self.verticalPosition)
+            {
+                case HHBadgePositionHeader:containY = 0;break;
+                case HHBadgePositionCenter:containY = parentSize.height * 0.5;break;
+                case HHBadgePositionFooter:containY = parentSize.height;break;
+                default:break;
+            }
+            CGFloat anchorPointX = MIN(1,MAX(0, self.anchorPoint.x));
+            CGFloat anchorPointY = MIN(1,MAX(0, self.anchorPoint.y));
+            containX = containX - anchorPointX * CGRectGetWidth(_containFrame);
+            containX = containX + self.centerOffsetInsets.left - self.centerOffsetInsets.right;
+            containY = containY - anchorPointY * CGRectGetHeight(_containFrame);
+            containY = containY + self.centerOffsetInsets.top - self.centerOffsetInsets.bottom;
+            containOrigin = CGPointMake(containX, containY);
+        }
+        contentOrigin = CGPointMake(self.contentInsets.left + self.boardWidth, self.contentInsets.top + self.boardWidth);
+    }
+    _containFrame.origin = containOrigin;
+    _contentFrame.origin = contentOrigin;
 }
 
 - (void)drawRect:(CGRect)rect {
@@ -140,6 +241,7 @@ static inline NSArray* HHBadgeNeedLayoutObserveKeyPaths(){
         void (^drawText)(NSString*, CGRect) = ^(NSString *text, CGRect rect) {
             NSMutableParagraphStyle *paragraph = [NSMutableParagraphStyle new];
             [paragraph setAlignment:NSTextAlignmentCenter];
+            [paragraph setLineBreakMode:NSLineBreakByTruncatingTail];
             [text drawWithRect:rect
                        options:(NSStringDrawingUsesLineFragmentOrigin|
                                 NSStringDrawingUsesFontLeading)
@@ -156,7 +258,6 @@ static inline NSArray* HHBadgeNeedLayoutObserveKeyPaths(){
             UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:cornerRadius];
             [path fill];
         };
-        
         CGRect boardRect = CGRectInset(rect, self.boardWidth, self.boardWidth);
         CGFloat containerCornerRadius = (self.cornerRadius != HHBadgeViewDefaultCornerRadius)?self.cornerRadius:CGRectGetHeight(rect) * 0.5;
         CGFloat boardCornerRadius = (self.cornerRadius != HHBadgeViewDefaultCornerRadius)?self.cornerRadius:CGRectGetHeight(boardRect) * 0.5;
@@ -165,7 +266,6 @@ static inline NSArray* HHBadgeNeedLayoutObserveKeyPaths(){
             drawRoundedRect(self.boardColor,rect,containerCornerRadius);
         }
         drawRoundedRect(badgeColor,boardRect,boardCornerRadius);
-        
         switch (self.badgeType) {
             case HHBadgeTypeText:drawText(self.value,_contentFrame);break;
             case HHBadgeTypeNumber:drawText([self.value stringValue],_contentFrame);break;
@@ -176,73 +276,12 @@ static inline NSArray* HHBadgeNeedLayoutObserveKeyPaths(){
     }
 }
 
-#pragma mark - private
-- (void)handleUpdateLayout {
-    CGRect containerFrame = CGRectZero;
-    CGRect parentFrame = self.parentFrame;
-    if (CGRectGetWidth(parentFrame) > 0 && CGRectGetHeight(parentFrame) > 0) {
-        if (!CGSizeEqualToSize(self.size, HHBadgeViewLayoutDefaultSize)) {
-            containerFrame.size = self.size;
-        } else {
-            CGRect contentFrame = CGRectZero;
-            switch (self.badgeType) {
-                case HHBadgeTypeNumber:
-                    contentFrame.size = HHBadgeTextSize([self.value stringValue], self.font);
-                    break;
-                case HHBadgeTypeText:
-                    contentFrame.size = HHBadgeTextSize(self.value, self.font);
-                    break;
-                case HHBadgeTypeDot:
-                    contentFrame.size = HHBadgeViewLayoutDefaultDotSize;
-                    break;
-                case HHBadgeTypeImage:
-                    contentFrame.size = [(UIImage*)self.value size];
-                    break;
-                case HHBadgeTypeCustomView:
-                    contentFrame.size = [(UIView*)self.value bounds].size;
-                    break;
-                default:
-                    break;
-            }
-            containerFrame.size = CGSizeMake(CGRectGetWidth(contentFrame) + self.contentInsets.left + self.contentInsets.right + self.boardWidth * 2, CGRectGetHeight(contentFrame) + self.contentInsets.top + self.contentInsets.bottom + self.boardWidth * 2);
-        }
-        
-        if (!CGPointEqualToPoint(self.origin, HHBadgeViewLayoutDefaultOrigin)) {
-            containerFrame.origin = self.origin;
-        } else {
-            CGFloat containX = 0;
-            CGFloat containY = 0;
-            switch (self.horizontalPosition)
-            {
-                case HHBadgePositionHeader:containX = 0;break;
-                case HHBadgePositionCenter:containX = CGRectGetWidth(parentFrame) * 0.5;break;
-                case HHBadgePositionFooter:containX = CGRectGetWidth(parentFrame);break;
-                default:break;
-            }
-            switch (self.verticalPosition)
-            {
-                case HHBadgePositionHeader:containY = 0;break;
-                case HHBadgePositionCenter:containY = CGRectGetHeight(parentFrame) * 0.5;break;
-                case HHBadgePositionFooter:containY = CGRectGetHeight(parentFrame);break;
-                default:break;
-            }
-            CGFloat anchorPointX = MIN(1,MAX(0, self.anchorPoint.x));
-            CGFloat anchorPointY = MIN(1,MAX(0, self.anchorPoint.y));
-            containX = containX - anchorPointX * CGRectGetWidth(containerFrame);
-            containX = containX + self.centerOffsetInsets.left - self.centerOffsetInsets.right;
-            containY = containY - anchorPointY * CGRectGetHeight(containerFrame);
-            containY = containY + self.centerOffsetInsets.top - self.centerOffsetInsets.bottom;
-            containerFrame.origin = CGPointMake(containX, containY);
-            if ([self.parentView.superview isEqual:self.superview]) {
-                containerFrame.origin = [self.parentView.superview convertPoint:containerFrame.origin fromView:self.parentView];
-            }
-        }
-    }
+- (CGSize)sizeThatFits:(CGSize)size {
+    return CGSizeMake(CGRectGetWidth(self.containFrame), CGRectGetHeight(self.containFrame));
+}
 
-    _contentFrame.origin = CGPointMake(self.contentInsets.left + self.boardWidth, self.contentInsets.top + self.boardWidth);
-    _contentFrame.size = CGSizeMake(CGRectGetWidth(containerFrame) - self.contentInsets.left - self.contentInsets.right - 2 * self.boardWidth, CGRectGetHeight(containerFrame) - self.contentInsets.top - self.contentInsets.bottom - 2 * self.boardWidth);
-    
-    self.frame = containerFrame;
+- (CGSize)intrinsicContentSize {
+    return CGSizeMake(CGRectGetWidth(self.containFrame), CGRectGetHeight(self.containFrame));
 }
 
 #pragma mark - set/get
@@ -273,6 +312,7 @@ static inline NSArray* HHBadgeNeedLayoutObserveKeyPaths(){
 
 - (void)setBackgroundColor:(UIColor *)backgroundColor {
     [super setBackgroundColor:[UIColor clearColor]];
+    [self setBadgeColor:backgroundColor];
 }
 
 @end
@@ -280,38 +320,51 @@ static inline NSArray* HHBadgeNeedLayoutObserveKeyPaths(){
 @implementation UIView (HHAddBadge)
 
 + (void)load {
-    SEL originalSEL = @selector(setFrame:);
-    SEL newSEL = @selector(hh_swizzle_setFrame:);
-    Method originalMethod = class_getInstanceMethod(self, originalSEL);
-    Method newMethod = class_getInstanceMethod(self, newSEL);
-    class_addMethod(self,
-                    originalSEL,
-                    class_getMethodImplementation(self, originalSEL),
-                    method_getTypeEncoding(originalMethod));
-    class_addMethod(self,
-                    newSEL,
-                    class_getMethodImplementation(self, newSEL),
-                    method_getTypeEncoding(newMethod));
-    method_exchangeImplementations(class_getInstanceMethod(self, originalSEL),
-                                   class_getInstanceMethod(self, newSEL));
+    void (^swizzleBlock)() = ^(SEL originalSEL, SEL newSEL){
+        Method originalMethod = class_getInstanceMethod(self, originalSEL);
+        Method newMethod = class_getInstanceMethod(self, newSEL);
+        class_addMethod(self,
+                        originalSEL,
+                        class_getMethodImplementation(self, originalSEL),
+                        method_getTypeEncoding(originalMethod));
+        class_addMethod(self,
+                        newSEL,
+                        class_getMethodImplementation(self, newSEL),
+                        method_getTypeEncoding(newMethod));
+        method_exchangeImplementations(class_getInstanceMethod(self, originalSEL),
+                                       class_getInstanceMethod(self, newSEL));
+    };
+    
+    swizzleBlock(@selector(setFrame:),@selector(hh_swizzle_setFrame:));
+    swizzleBlock(@selector(setBounds:),@selector(hh_swizzle_setBounds:));
 }
 
-+ (void)hh_registBadgeApperenceWithBlock:(void (^)(HHBadgeView *))apperenceBlock {
++ (void)hh_setupBadgeApperenceWithBlock:(void (^)(HHBadgeView *))apperenceBlock {
     objc_setAssociatedObject([UIApplication sharedApplication], _cmd, apperenceBlock, OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
+
+- (void)hh_swizzle_setBounds:(CGRect)bounds {
+    [self hh_swizzle_setBounds:bounds];
+    if (objc_getAssociatedObject(self, @selector(hh_badge))) {
+        self.hh_badge.parentBounds = bounds;
+    }
 }
 
 - (void)hh_swizzle_setFrame:(CGRect)frame {
     [self hh_swizzle_setFrame:frame];
     if (objc_getAssociatedObject(self, @selector(hh_badge))) {
-        self.hh_badge.parentFrame = frame;
+        self.hh_badge.parentBounds = (CGRect){CGPointZero,frame.size};
     }
 }
 
-- (void)hh_remove {
+- (void)hh_removeBadge {
     self.hh_badge = nil;
 }
 
 - (void)setHh_badge:(HHBadgeView *)hh_badge {
+    if (!hh_badge && objc_getAssociatedObject(self, @selector(hh_badge))) {
+        [self.hh_badge removeFromSuperview];
+    }
     objc_setAssociatedObject(self, @selector(hh_badge), hh_badge, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
@@ -336,9 +389,9 @@ static inline NSArray* HHBadgeNeedLayoutObserveKeyPaths(){
         __block UIImageView *imageView = nil;
         [[self hh_view].subviews enumerateObjectsUsingBlock:^(__kindof UIView * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
             if ([obj isKindOfClass:[UIImageView class]]) {
-                imageView = (UIImageView*)obj;
-                if ([imageView.image isEqual:self.image]) {
-                    objc_setAssociatedObject(self, _cmd, imageView, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                if ([[(UIImageView*)obj image] isEqual:self.image]) {
+                    objc_setAssociatedObject(self, _cmd, obj, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                    imageView = obj;
                     *stop = YES;
                 }
             }
@@ -352,9 +405,9 @@ static inline NSArray* HHBadgeNeedLayoutObserveKeyPaths(){
         __block UILabel *titleLabel = nil;
         [[self hh_view].subviews enumerateObjectsUsingBlock:^(__kindof UIView * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
             if ([obj isKindOfClass:[UILabel class]]) {
-                titleLabel = (UILabel*)obj;
-                if ([titleLabel.text isEqualToString:self.title]) {
-                    objc_setAssociatedObject(self, _cmd, titleLabel, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                if ([[(UILabel*)obj text] isEqualToString:self.title]) {
+                    objc_setAssociatedObject(self, _cmd, obj, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                    titleLabel = obj;
                     *stop = YES;
                 }
             }

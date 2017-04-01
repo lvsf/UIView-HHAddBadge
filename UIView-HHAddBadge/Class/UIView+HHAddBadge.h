@@ -24,7 +24,6 @@ typedef NS_ENUM(NSInteger,HHBadgePosition) {
 };
 
 @interface HHBadgeView : UIView
-@property (nonatomic,strong) UIColor *badgeColor;
 /**
  附属视图的值/NSString/NSNumer/UIColor/UIImage/UIView
  */
@@ -45,10 +44,6 @@ typedef NS_ENUM(NSInteger,HHBadgePosition) {
  附属视图的边线宽度,默认为0
  */
 @property (nonatomic,assign) CGFloat boardWidth;
-/**
- 附属视图背景图片,默认为nil
- */
-@property (nonatomic,strong) UIImage *backgroudImage;
 /**
  附属视图的字体/当hh_badgeValue为NSNumber或NSString时有效,默认为[UIFont systemFontOfSize:15]
  */
@@ -100,11 +95,11 @@ typedef NS_ENUM(NSInteger,HHBadgePosition) {
 
  @param apperenceBlock 配置Block
  */
-+ (void)hh_registBadgeApperenceWithBlock:(void(^)(HHBadgeView *badgeView))apperenceBlock;
++ (void)hh_setupBadgeApperenceWithBlock:(void(^)(HHBadgeView *badgeView))apperenceBlock;
 /**
  移除当前HHBadgeView
  */
-- (void)hh_remove;
+- (void)hh_removeBadge;
 @end
 
 /**

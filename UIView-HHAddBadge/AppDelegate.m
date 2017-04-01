@@ -10,7 +10,6 @@
 #import "HHBadgeViewController.h"
 
 @interface AppDelegate ()
-
 @end
 
 @implementation AppDelegate
@@ -20,14 +19,14 @@
     
     [UINavigationBar appearance].barTintColor = [UIColor greenColor];
     
-    UIWindow *w = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
-    [w makeKeyAndVisible];
-    [w setRootViewController:({
-        UITabBarController *vc = [UITabBarController new];
-        [vc addChildViewController:[[UINavigationController alloc] initWithRootViewController:[HHBadgeViewController new]]];
-        vc;
+    UIWindow *window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+    [window makeKeyAndVisible];
+    [window setRootViewController:({
+        UITabBarController *tabBarController = [UITabBarController new];
+        [tabBarController addChildViewController:[[UINavigationController alloc] initWithRootViewController:[HHBadgeViewController new]]];
+        tabBarController;
     })];
-    [self setWindow:w];
+    [self setWindow:window];
     return YES;
 }
 
