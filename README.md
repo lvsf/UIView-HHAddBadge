@@ -65,4 +65,4 @@ badgeView.value = @"1";
 badgeView.horizontalPosition = HHBadgePositionCenter;
 ```
 * 运行结果
-<img alt="ScreenShot BarButtonItem" src="http://img0.ph.126.net/etSVVQYdJcaz4pjI-vLXgA==/6631969365236403486.png" width="320px"/>
+<img alt="ScreenShot BarButtonItem" src="http://img0.ph.126.net/4DlCe-xpPqCsUXaAGS1TYQ==/6632258536791836259.png" width="320px"/>
