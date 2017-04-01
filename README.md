@@ -1,12 +1,16 @@
-# UIView-HHAddBadge
-//全局配置
+## UIView-HHAddBadged
+* 使用UIView扩展添加badge
+## How to use
+* 全局配置
+``` objective-c
 [UIView hh_setupBadgeApperenceWithBlock:^(HHBadgeView *badgeView) {
 badgeView.font = [UIFont systemFontOfSize:15];
 badgeView.horizontalPosition = HHBadgePositionFooter;
 badgeView.verticalPosition = HHBadgePositionHeader;
 }];
-
-//xib
+```
+* xib
+``` objective-c
 HHBadgeXIBView *xib = [[NSBundle mainBundle] loadNibNamed:@"HHBadgeXIBView" owner:nil options:nil].firstObject;
 xib.bounds = CGRectMake(0, 0, 250, 100);
 xib.center = CGPointMake(self.view.center.x, 135);
@@ -23,8 +27,9 @@ xib.xibLabel.hh_badge.backgroundColor = [UIColor clearColor];
 xib.backgroundColor = [UIColor orangeColor];
 [self.view addSubview:xib];
 [self setXibView:xib];
-
-//code
+``` 
+* code
+``` objective-c
 UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
 btn.titleLabel.hh_badge.value = @"sizeToFit";
 btn.titleLabel.hh_badge.hh_badge.value = [UIColor whiteColor];
@@ -39,17 +44,23 @@ btn.backgroundColor = [UIColor cyanColor];
 [btn sizeToFit];
 [btn setCenter:CGPointMake(self.view.center.x, 300)];
 [self.view addSubview:btn];
-
-//UIBarButtonItem
+```
+* UIBarButtonItem
+``` objective-c
 self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"UIBarButtonItem" style:UIBarButtonItemStylePlain target:self action:@selector(touchAction)];
 self.navigationItem.rightBarButtonItem.hh_titleLabel.hh_badge.value = [UIColor redColor];
-
-//UITabBarItem
+```
+* UITabBarItem
+``` objective-c
 [self.tabBarController.tabBar.items.firstObject hh_titleLabel].hh_badge.value = @"UITabBarItem";
 [self.tabBarController.tabBar.items.firstObject hh_titleLabel].hh_badge.font = [UIFont systemFontOfSize:8];
 [self.tabBarController.tabBar.items.firstObject hh_titleLabel].hh_badge.anchorPoint = CGPointMake(0, 0.5);
-
-//HHBadgeView
+```
+* HHBadgeView
+``` objective-c
 HHBadgeView *badgeView = [HHBadgeView badgeViewWithParentView:self.tabBarController.tabBar];
 badgeView.value = @"tabBar";
 badgeView.horizontalPosition = HHBadgePositionCenter;
+```
+* 运行结果
+<img alt="ScreenShot BarButtonItem" src="http://img0.ph.126.net/eoL3RZw3Y8Hr1wFtXu4a6w==/6632255238256952526.png" width="320px"/>
