@@ -9,6 +9,23 @@
     badgeView.verticalPosition = HHBadgePositionHeader;
 }];
 ```
+* code
+``` objective-c
+UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+btn.titleLabel.hh_badge.value = @"123456";
+btn.titleLabel.hh_badge.hh_badge.value = [UIColor whiteColor];
+btn.imageView.hh_badge.value = [UIColor yellowColor];
+btn.imageView.hh_badge.horizontalPosition = HHBadgePositionFooter;
+btn.imageView.hh_badge.verticalPosition = HHBadgePositionHeader;
+btn.imageView.hh_badge.anchorPoint = CGPointMake(1, 0);
+btn.imageView.hh_badge.size = CGSizeMake(10, 10);
+btn.backgroundColor = [UIColor cyanColor];
+[btn setTitle:@"UIButton" forState:UIControlStateNormal];
+[btn setImage:[UIImage imageNamed:@"任飘渺"] forState:UIControlStateNormal];
+[btn sizeToFit];
+[btn setCenter:CGPointMake(self.view.center.x, 300)];
+[self.view addSubview:btn];
+```
 * xib
 ``` objective-c
 HHBadgeXIBView *xib = [[NSBundle mainBundle] loadNibNamed:@"HHBadgeXIBView" owner:nil options:nil].firstObject;
@@ -30,23 +47,6 @@ xib.backgroundColor = [UIColor orangeColor];
 [self.view addSubview:xib];
 [self setXibView:xib];
 ``` 
-* code
-``` objective-c
-UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
-btn.titleLabel.hh_badge.value = @"123456";
-btn.titleLabel.hh_badge.hh_badge.value = [UIColor whiteColor];
-btn.imageView.hh_badge.value = [UIColor yellowColor];
-btn.imageView.hh_badge.horizontalPosition = HHBadgePositionFooter;
-btn.imageView.hh_badge.verticalPosition = HHBadgePositionHeader;
-btn.imageView.hh_badge.anchorPoint = CGPointMake(1, 0);
-btn.imageView.hh_badge.size = CGSizeMake(10, 10);
-btn.backgroundColor = [UIColor cyanColor];
-[btn setTitle:@"UIButton" forState:UIControlStateNormal];
-[btn setImage:[UIImage imageNamed:@"任飘渺"] forState:UIControlStateNormal];
-[btn sizeToFit];
-[btn setCenter:CGPointMake(self.view.center.x, 300)];
-[self.view addSubview:btn];
-```
 * UIBarButtonItem
 ``` objective-c
 self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"UIBarButtonItem" style:UIBarButtonItemStylePlain target:self action:@selector(touchAction)];
