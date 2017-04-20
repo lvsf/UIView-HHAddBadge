@@ -102,14 +102,6 @@ typedef NS_ENUM(NSInteger,HHBadgePosition) {
 - (void)hh_removeBadge;
 @end
 
-/**
- 给系统导航栏控件或标签栏控件添加badge
- 1.UINavigationItem
- viewController.navigationItem.rightBarButtonItem.hh_titleLabel
- 2.UITabBarItem:
- viewController.tabBarItem.hh_titleLabel无法正常显示
- => viewController.tabBarController.tabBar.items[index].hh_titleLabel
- */
 @interface UIBarItem(HHAddBadge)
 /**
  UIBarItem对应的view/UIBarItem->view
@@ -120,11 +112,11 @@ typedef NS_ENUM(NSInteger,HHBadgePosition) {
 /**
  UIBarItem上的图片视图
 
- @return UIImageView/UIBarItem->image
+ @return UIImageView
  */
 - (UIImageView *)hh_imageView;
 /**
- UIBarItem上的文本视图/UIBarItem->title
+ UIBarItem上的文本视图
  
  @return UIImageView
  */

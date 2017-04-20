@@ -7,6 +7,7 @@
 //
 
 #import "AppDelegate.h"
+#import "HHTabBarController.h"
 #import "HHBadgeViewController.h"
 
 @interface AppDelegate ()
@@ -22,8 +23,12 @@
     UIWindow *window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
     [window makeKeyAndVisible];
     [window setRootViewController:({
-        UITabBarController *tabBarController = [UITabBarController new];
-        [tabBarController addChildViewController:[[UINavigationController alloc] initWithRootViewController:[HHBadgeViewController new]]];
+        HHTabBarController *tabBarController = [HHTabBarController new];
+        HHBadgeViewController *badgeViewController = [HHBadgeViewController new];
+        [badgeViewController.tabBarItem setTitle:@"badge"];
+        [badgeViewController.tabBarItem setImage:[UIImage imageNamed:@"tabBar_1"]];
+        [badgeViewController.tabBarItem setSelectedImage:[UIImage imageNamed:@"tabBar_1"]];
+        [tabBarController addChildViewController:[[UINavigationController alloc] initWithRootViewController:badgeViewController]];
         tabBarController;
     })];
     [self setWindow:window];

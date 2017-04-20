@@ -151,7 +151,7 @@ static inline NSArray* HHBadgeNeedDisplayObserveKeyPaths(){
             }
             if ([HHBadgeNeedDisplayObserveKeyPaths() containsObject:keyPath]) {
                 if (!CGRectEqualToRect(CGRectZero, _containFrame)) {
-                    [self setNeedsDisplayInRect:_containFrame];
+                    [self setNeedsDisplay];
                 }
             }
         }
@@ -243,8 +243,7 @@ static inline NSArray* HHBadgeNeedDisplayObserveKeyPaths(){
             [paragraph setAlignment:NSTextAlignmentCenter];
             [paragraph setLineBreakMode:NSLineBreakByTruncatingTail];
             [text drawWithRect:rect
-                       options:(NSStringDrawingUsesLineFragmentOrigin|
-                                NSStringDrawingUsesFontLeading)
+                       options:(NSStringDrawingUsesLineFragmentOrigin)
                     attributes:@{NSFontAttributeName:self.font,
                                  NSForegroundColorAttributeName:self.foregroundColor,
                                  NSParagraphStyleAttributeName:paragraph}
@@ -258,14 +257,17 @@ static inline NSArray* HHBadgeNeedDisplayObserveKeyPaths(){
             UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:cornerRadius];
             [path fill];
         };
-        CGRect boardRect = CGRectInset(rect, self.boardWidth, self.boardWidth);
-        CGFloat containerCornerRadius = (self.cornerRadius != HHBadgeViewDefaultCornerRadius)?self.cornerRadius:CGRectGetHeight(rect) * 0.5;
-        CGFloat boardCornerRadius = (self.cornerRadius != HHBadgeViewDefaultCornerRadius)?self.cornerRadius:CGRectGetHeight(boardRect) * 0.5;
-        UIColor *badgeColor = (self.badgeType == HHBadgeTypeDot)?self.value:self.badgeColor;
+        //1.画边框
         if (self.boardWidth > 0) {
-            drawRoundedRect(self.boardColor,rect,containerCornerRadius);
+            CGFloat boardCornerRadius = (self.cornerRadius != HHBadgeViewDefaultCornerRadius)?self.cornerRadius:CGRectGetHeight(rect) * 0.5;
+            drawRoundedRect(self.boardColor,rect,boardCornerRadius);
         }
-        drawRoundedRect(badgeColor,boardRect,boardCornerRadius);
+        //2.画背景
+        CGRect badgeRect = CGRectInset(rect, self.boardWidth, self.boardWidth);
+        CGFloat badgeCornerRadius = (self.cornerRadius != HHBadgeViewDefaultCornerRadius)?self.cornerRadius:CGRectGetHeight(badgeRect) * 0.5;
+        UIColor *badgeColor = (self.badgeType == HHBadgeTypeDot)?self.value:self.badgeColor;
+        drawRoundedRect(badgeColor,badgeRect,badgeCornerRadius);
+        //3.画内容
         switch (self.badgeType) {
             case HHBadgeTypeText:drawText(self.value,_contentFrame);break;
             case HHBadgeTypeNumber:drawText([self.value stringValue],_contentFrame);break;
@@ -387,9 +389,15 @@ static inline NSArray* HHBadgeNeedDisplayObserveKeyPaths(){
 - (UIImageView *)hh_imageView {
     return objc_getAssociatedObject(self, _cmd)?:({
         __block UIImageView *imageView = nil;
+        UIImage *selectedImage = nil;
+        if ([self isKindOfClass:[UITabBarItem class]]) {
+            UITabBarItem *tabBarItem = (UITabBarItem*)self;
+            selectedImage = tabBarItem.selectedImage;
+        }
         [[self hh_view].subviews enumerateObjectsUsingBlock:^(__kindof UIView * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
             if ([obj isKindOfClass:[UIImageView class]]) {
-                if ([[(UIImageView*)obj image] isEqual:self.image]) {
+                if ([[(UIImageView*)obj image] isEqual:self.image] ||
+                    [[(UIImageView*)obj image] isEqual:selectedImage]) {
                     objc_setAssociatedObject(self, _cmd, obj, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
                     imageView = obj;
                     *stop = YES;

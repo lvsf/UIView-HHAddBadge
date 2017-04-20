@@ -19,7 +19,7 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    self.title = @"badge";
+    self.navigationItem.title = @"badge";
     self.view.backgroundColor = [UIColor lightGrayColor];
     
     //全局配置
@@ -70,9 +70,9 @@
     self.navigationItem.rightBarButtonItem.hh_titleLabel.hh_badge.value = [UIColor redColor];
     
     //UITabBarItem
-    [self.tabBarController.tabBar.items.firstObject hh_titleLabel].hh_badge.value = @"UITabBarItem";
-    [self.tabBarController.tabBar.items.firstObject hh_titleLabel].hh_badge.font = [UIFont systemFontOfSize:8];
-    [self.tabBarController.tabBar.items.firstObject hh_titleLabel].hh_badge.anchorPoint = CGPointMake(0, 0.5);
+    [self.tabBarItem hh_titleLabel].hh_badge.value = @"UITabBarItem";
+    [self.tabBarItem hh_titleLabel].hh_badge.font = [UIFont systemFontOfSize:8];
+    [self.tabBarItem hh_titleLabel].hh_badge.anchorPoint = CGPointMake(0, 0.5);
     
     //HHBadgeView
     HHBadgeView *badgeView = [HHBadgeView badgeViewWithParentView:self.tabBarController.tabBar];
