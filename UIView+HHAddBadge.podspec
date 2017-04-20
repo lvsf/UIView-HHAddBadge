@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
     s.name         = 'UIView+HHAddBadge'
-    s.version      = '0.0.2'
-    s.summary      = 'add badge'
+    s.version      = '0.0.3'
+    s.summary      = '使用UIView扩展添加badge'
     s.homepage     = 'https://github.com/lvsf/UIView-HHAddBadge'
     s.license      = 'MIT'
     s.authors      = {'lvsf' => 'lvsf1992@163.com'}
